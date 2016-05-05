@@ -1,15 +1,13 @@
 
 # Graphitty
 
-A Python library that convert time series to irection Graph to discover the story within data.
+A Python library that convert time series to direction Graph to discover the story within data.
 
 
 ![Example graph](apollo.png)
 
 
 [![Circle CI](https://circleci.com/gh/sketchytechky/graphitty.svg?style=svg&circle-token=<cirlce-ci-token>)](https://circleci.com/gh/sketchytechky/graphitty)
-
-[![Coverage Status](https://coveralls.io/repos/sketchytechky/graphitty/badge.svg?branch=master&service=github)](https://coveralls.io/github/sketchytechky/graphitty?branch=master)
 
 # Installing
 
