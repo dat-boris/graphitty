@@ -63,7 +63,7 @@ class Graphitty(object):
         return ','.join(path)
 
     def create_graph(self,
-                     min_edges=10,
+                     min_edges=0,
                      use_perc_label=True,
                      filter_subgraph=True,
                      skip_backref=True,
@@ -132,6 +132,7 @@ class Graphitty(object):
                     else:
                         label = 100. * count / in_count
 
+                # TODO: need to fix
                 try:
                     edge_color = color_array[
                         int((float(label) / MAX_COUNT) *
@@ -147,17 +148,32 @@ class Graphitty(object):
                 added_edges[(e[1], e[0])] = 1
 
         if filter_subgraph:
-            U = G.to_undirected()
-            nodes = nx.shortest_path(U, 'start').keys()
-            G = G.subgraph(nodes)
+            G = self.filter_subgraph(G)
 
         self.G = G
         return G
 
+    def get_node(self, G, name):
+        for n in G.nodes():
+            if name in str(n):
+                return n
+        raise IndexError("No node {} found! nodes = {}".format(
+            name, G.nodes()))
+
+    def filter_subgraph(self, G):
+        seen_nodes = set()
+        for path in nx.all_simple_paths(G,
+                                        source=self.get_node(G, 'start'),
+                                        target=self.get_node(G, 'exit')
+                                        ):
+            seen_nodes.update(path)
+        for n in G.nodes():
+            if n not in seen_nodes:
+                G.remove_node(n)
+        return G
+
     def simplify(self,
-                 condense=True,
-                 relabel=True,
-                 min_edges=10,
+                 min_edges=0,
                  use_perc_label=True,
                  filter_subgraph=True,
                  skip_backref=True,
@@ -167,8 +183,8 @@ class Graphitty(object):
         """
         G = self.create_graph(
             min_edges=min_edges,
-            use_perc_label=min_edges,
-            filter_subgraph=filter_subgraph,
+            use_perc_label=use_perc_label,
+            filter_subgraph=False,
             skip_backref=skip_backref,
             # note that we use empty node_mapping
             node_mapping=None,
@@ -187,12 +203,15 @@ class Graphitty(object):
 
         G2 = self.create_graph(
             min_edges=min_edges,
-            use_perc_label=min_edges,
+            use_perc_label=use_perc_label,
             # disable subgraph filtering
             # (since 'start' node might not be there)
             filter_subgraph=False,
             skip_backref=skip_backref,
             node_mapping=relabel_mapping,
             MAX_COUNT=MAX_COUNT)
+
+        if filter_subgraph:
+            G2 = self.filter_subgraph(G2)
 
         return G2

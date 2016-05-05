@@ -42,7 +42,7 @@ def test_simplification(g):
         min_edges=0,
         filter_subgraph=True
     )
-    nx_tree = g.simplify()
+    nx_tree = g.simplify(min_edges=0)
     output_png = os.path.join(
         ARTIFACTS_DIR,
         'tree.png'
