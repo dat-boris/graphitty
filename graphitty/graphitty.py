@@ -66,6 +66,7 @@ class Graphitty(object):
                      min_edges=10,
                      use_perc_label=True,
                      filter_subgraph=True,
+                     skip_backref=True,
                      MAX_COUNT=100):
         """
         Create a networkx
@@ -85,36 +86,38 @@ class Graphitty(object):
         for i, (e, count) in enumerate(
                 self.graph_edges.most_common(MAX_COUNT)):
             if count >= min_edges:
-                if (e[1], e[0]) not in added_edges:
-                    # print "Added edge: {}".format([e[0],e[1]])
-                    label = count
-                    if use_perc_label:
-                        # get all in edge
-                        in_count = sum([
+                if skip_backref and ((e[1], e[0]) in added_edges):
+                    continue
+
+                # print "Added edge: {}".format([e[0],e[1]])
+                label = count
+                if use_perc_label:
+                    # get all in edge
+                    in_count = sum([
+                        c for (n0, n1), c
+                        in self.graph_edges.iteritems()
+                        if n1 == e[0]
+                    ])
+                    if in_count == 0:
+                        out_count = sum([
                             c for (n0, n1), c
                             in self.graph_edges.iteritems()
-                            if n1 == e[0]
+                            if n0 == e[0]
                         ])
-                        if in_count == 0:
-                            out_count = sum([
-                                c for (n0, n1), c
-                                in self.graph_edges.iteritems()
-                                if n0 == e[0]
-                            ])
-                            label = 100. * count / out_count
-                        else:
-                            label = 100. * count / in_count
+                        label = 100. * count / out_count
+                    else:
+                        label = 100. * count / in_count
 
-                    G.add_edge(e[0], e[1],
-                               weight=count,
-                               # label="{:.1f}%".format(
-                               #     label) if use_perc_label else label,
-                               label=count,
-                               color=color_array[
-                                   int((float(label) / MAX_COUNT) *
-                                       (len(color_array) - 1))]
-                               )
-                    added_edges[(e[1], e[0])] = 1
+                G.add_edge(e[0], e[1],
+                           weight=count,
+                           # label="{:.1f}%".format(
+                           #     label) if use_perc_label else label,
+                           label=count,
+                           color=color_array[
+                               int((float(label) / MAX_COUNT) *
+                                   (len(color_array) - 1))]
+                           )
+                added_edges[(e[1], e[0])] = 1
 
         if filter_subgraph:
             U = G.to_undirected()
@@ -124,19 +127,9 @@ class Graphitty(object):
         self.G = G
         return G
 
-    def simplify(self):
+    def simplify(self, condense=True):
         """
         Return an edge contract version of the graph for simplification
-
-        Algorithm:
-        1. generate a graph with nocycle (note: this is different from a
-            simple tree traversal, tree generated from traversal is minimum
-            edges spanning tree )
-
-        2. Generate the minimum cut
-
-        See:
-        * https://en.wikipedia.org/wiki/Minimum_cut
         """
         assert self.G, "Must run create_graph before"
         G = self.G.copy()
@@ -148,9 +141,9 @@ class Graphitty(object):
             for i in range(len(path) - 1):
                 edges_to_include.add((path[i], path[i + 1]))
 
-        for e in G.edges():
-            if (e[0], e[1]) not in edges_to_include:
-                G.remove_edge(*e)
+        # for e in G.edges():
+        #     if (e[0], e[1]) not in edges_to_include:
+        #         G.remove_edge(*e)
 
         for n in G.nodes():
             if n not in seen_nodes:
@@ -162,9 +155,17 @@ class Graphitty(object):
         #     edge_chosen = (cyc[-2], cyc[-1])
         #     G.remove_edge(*edge_chosen)
 
-        assert len(list(nx.simple_cycles(G))) == 0, "Seen cycle in graph"
+        # assert len(list(nx.simple_cycles(G))) == 0, "Seen cycle in graph"
 
-        cut_value, partition = nx.minimum_cut(G, 'start', 'exit',
-                                              capacity='weight')
-        print partition
+        if condense:
+            scc = list(nx.strongly_connected_components(G))
+            G = nx.condensation(G, scc=scc)
+
+            relabel_mapping = {}
+            for node in G.nodes():
+                component = scc[node]
+                relabel_mapping[node] = ','.join(component)
+
+            G = nx.relabel_nodes(G, relabel_mapping)
+
         return G
