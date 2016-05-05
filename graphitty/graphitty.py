@@ -67,9 +67,12 @@ class Graphitty(object):
                      use_perc_label=True,
                      filter_subgraph=True,
                      skip_backref=True,
+                     node_mapping=None,
                      MAX_COUNT=100):
         """
         Create a networkx
+
+        :param: node_mapping dict - a dictionary of {dst : [src]}
 
         :return: Network x graph
         """
@@ -83,8 +86,29 @@ class Graphitty(object):
         if use_perc_label:
             color_array.reverse()
 
+        # consider node_mapping data
+        # build a mapping of the src -> dst node
+        mapped_edge_count = Counter()
+
+        if node_mapping:
+            src_dst_mapping = {}
+            for dst, src_list in node_mapping.iteritems():
+                for src in src_list:
+                    src_dst_mapping[src] = dst
+
+            for i, (e, count) in enumerate(
+                    self.graph_edges.most_common(MAX_COUNT)):
+
+                src_node = src_dst_mapping.get(e[0], e[0])
+                dst_node = src_dst_mapping.get(e[1], e[1])
+
+                mapped_edge_count[(src_node, dst_node)] += count
+        else:
+            mapped_edge_count = self.graph_edges
+
         for i, (e, count) in enumerate(
-                self.graph_edges.most_common(MAX_COUNT)):
+                mapped_edge_count.most_common(MAX_COUNT)):
+
             if count >= min_edges:
                 if skip_backref and ((e[1], e[0]) in added_edges):
                     continue
@@ -95,28 +119,31 @@ class Graphitty(object):
                     # get all in edge
                     in_count = sum([
                         c for (n0, n1), c
-                        in self.graph_edges.iteritems()
+                        in mapped_edge_count.iteritems()
                         if n1 == e[0]
                     ])
                     if in_count == 0:
                         out_count = sum([
                             c for (n0, n1), c
-                            in self.graph_edges.iteritems()
+                            in mapped_edge_count.iteritems()
                             if n0 == e[0]
                         ])
                         label = 100. * count / out_count
                     else:
                         label = 100. * count / in_count
 
+                try:
+                    edge_color = color_array[
+                        int((float(label) / MAX_COUNT) *
+                            (len(color_array) - 1))]
+                except IndexError:
+                    edge_color = 'grey'
+
                 G.add_edge(e[0], e[1],
                            weight=count,
-                           # label="{:.1f}%".format(
-                           #     label) if use_perc_label else label,
-                           label=count,
-                           color=color_array[
-                               int((float(label) / MAX_COUNT) *
-                                   (len(color_array) - 1))]
-                           )
+                           label="{:.1f}%".format(
+                               label) if use_perc_label else label,
+                           color=edge_color)
                 added_edges[(e[1], e[0])] = 1
 
         if filter_subgraph:
@@ -127,45 +154,45 @@ class Graphitty(object):
         self.G = G
         return G
 
-    def simplify(self, condense=True):
+    def simplify(self,
+                 condense=True,
+                 relabel=True,
+                 min_edges=10,
+                 use_perc_label=True,
+                 filter_subgraph=True,
+                 skip_backref=True,
+                 MAX_COUNT=100):
         """
         Return an edge contract version of the graph for simplification
         """
-        assert self.G, "Must run create_graph before"
-        G = self.G.copy()
+        G = self.create_graph(
+            min_edges=min_edges,
+            use_perc_label=min_edges,
+            filter_subgraph=filter_subgraph,
+            skip_backref=skip_backref,
+            # note that we use empty node_mapping
+            node_mapping=None,
+            MAX_COUNT=MAX_COUNT)
 
-        seen_nodes = set()
-        edges_to_include = set()
-        for path in nx.all_simple_paths(G, source='start', target='exit'):
-            seen_nodes.update(path)
-            for i in range(len(path) - 1):
-                edges_to_include.add((path[i], path[i + 1]))
+        scc = list(nx.strongly_connected_components(G))
+        G = nx.condensation(G, scc=scc)
 
-        # for e in G.edges():
-        #     if (e[0], e[1]) not in edges_to_include:
-        #         G.remove_edge(*e)
+        relabel_mapping = {}
+        for node in G.nodes():
+            node_name = "[{}] {}".format(
+                len(scc[node]),
+                ','.join(scc[node])
+            )
+            relabel_mapping[node_name] = scc[node]
 
-        for n in G.nodes():
-            if n not in seen_nodes:
-                G.remove_node(n)
+        G2 = self.create_graph(
+            min_edges=min_edges,
+            use_perc_label=min_edges,
+            # disable subgraph filtering
+            # (since 'start' node might not be there)
+            filter_subgraph=False,
+            skip_backref=skip_backref,
+            node_mapping=relabel_mapping,
+            MAX_COUNT=MAX_COUNT)
 
-        # for cyc in nx.simple_cycles(G):
-        #     # now we try to break each cycle with the edges that is minimal
-        #     # TODO: be smart about this
-        #     edge_chosen = (cyc[-2], cyc[-1])
-        #     G.remove_edge(*edge_chosen)
-
-        # assert len(list(nx.simple_cycles(G))) == 0, "Seen cycle in graph"
-
-        if condense:
-            scc = list(nx.strongly_connected_components(G))
-            G = nx.condensation(G, scc=scc)
-
-            relabel_mapping = {}
-            for node in G.nodes():
-                component = scc[node]
-                relabel_mapping[node] = ','.join(component)
-
-            G = nx.relabel_nodes(G, relabel_mapping)
-
-        return G
+        return G2

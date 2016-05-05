@@ -9,6 +9,7 @@ import pandas as pd
 from graphitty.graphitty import Graphitty
 from nxpd import draw
 
+
 def run_simplication(csv, output_png):
     df = pd.read_csv(csv)
     g = Graphitty(
@@ -17,16 +18,14 @@ def run_simplication(csv, output_png):
         beahivour_col='url',
         ts_col='date')
 
-    g.create_graph(
+    # draw non-condensed version
+    nx_orig = g.create_graph(
         min_edges=0,
         filter_subgraph=True
     )
+    draw(nx_orig, "original_" + output_png, show=False)
 
-    # draw non-condensed version
-    nx_tree = g.simplify(condense=False)
-    draw(nx_tree, "original_" + output_png, show=False)
-
-    nx_condense = g.simplify(condense=True)
+    nx_condense = g.simplify()
     draw(nx_condense, output_png, show=False)
 
 
