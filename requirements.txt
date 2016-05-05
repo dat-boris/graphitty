@@ -1,0 +1,7 @@
+tox
+pytest
+pytest-cache
+pytest-cov
+pytest-pep8
+pytest-watch
+coveralls
