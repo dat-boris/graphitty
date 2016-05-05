@@ -160,17 +160,23 @@ class Graphitty(object):
         raise IndexError("No node {} found! nodes = {}".format(
             name, G.nodes()))
 
-    def filter_subgraph(self, G):
+    def filter_subgraph(self, G, max_path=10):
         seen_nodes = set()
-        for path in nx.all_simple_paths(G,
-                                        source=self.get_node(G, 'start'),
-                                        target=self.get_node(G, 'exit')
-                                        ):
+        for path in self.get_path_in_weight_order(G)[:max_path]:
             seen_nodes.update(path)
         for n in G.nodes():
             if n not in seen_nodes:
                 G.remove_node(n)
         return G
+
+    def get_path_in_weight_order(self, G):
+        paths = nx.all_simple_paths(G,
+                                    source=self.get_node(G, 'start'),
+                                    target=self.get_node(G, 'exit')
+                                    )
+        return sorted(paths,
+                      key=lambda p: G[p[0]][p[1]]['weight'],
+                      reverse=True)
 
     def simplify(self,
                  min_edges=0,

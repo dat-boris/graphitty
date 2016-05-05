@@ -32,7 +32,7 @@ def test_read_generate_graph(g):
     filesize = os.stat(TEST_GRAPH_OUTPUT).st_size
     assert filesize > 1000
 
-    assert len(nx_graph.nodes()) > 10
+    assert len(nx_graph.nodes()) > 5
     assert nx.number_connected_components(nx_graph.to_undirected()) == 1
 
 
