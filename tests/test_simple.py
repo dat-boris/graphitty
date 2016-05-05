@@ -1,6 +1,6 @@
 import os
 import networkx as nx
-from nxpd import nxpdParams, draw
+from nxpd import draw
 
 ARTIFACTS_DIR = os.environ.get(
     'CIRCLE_ARTIFACTS',
