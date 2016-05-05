@@ -1,16 +1,6 @@
 import os
-import pandas as pd
 import networkx as nx
 from nxpd import nxpdParams, draw
-
-from graphitty.graphitty import Graphitty
-
-# HTTP log from http://ita.ee.lbl.gov/html/contrib/NASA-HTTP.html
-
-FIXTURE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    'nasa_jul95.csv'
-)
 
 ARTIFACTS_DIR = os.environ.get(
     'CIRCLE_ARTIFACTS',
@@ -26,16 +16,10 @@ TEST_GRAPH_OUTPUT = os.path.join(
 )
 
 
-def test_read_generate_graph():
+def test_read_generate_graph(g):
     if os.path.isfile(TEST_GRAPH_OUTPUT):
         os.remove(TEST_GRAPH_OUTPUT)
 
-    df = pd.read_csv(FIXTURE)
-    g = Graphitty(
-        df,
-        id_col='ip',
-        beahivour_col='url',
-        ts_col='date')
     nx_graph = g.create_graph(
         min_edges=0,
         filter_subgraph=True
