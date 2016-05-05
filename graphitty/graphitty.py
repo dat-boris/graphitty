@@ -65,7 +65,13 @@ class Graphitty(object):
                      min_edges=10,
                      use_perc_label=True,
                      no_backtrace=False,
+                     filter_subgraph=True,
                      MAX_COUNT=100):
+        """
+        Create a networkx
+
+        :return: Network x graph
+        """
         G = nx.DiGraph()
         added_edges = {}
 
@@ -78,7 +84,7 @@ class Graphitty(object):
 
         for i, (e, count) in enumerate(
                 self.graph_edges.most_common(MAX_COUNT)):
-            if count > min_edges:
+            if count >= min_edges:
                 if (
                     ((e[1], e[0]) not in added_edges) and
                     ((not no_backtrace) or
@@ -112,4 +118,10 @@ class Graphitty(object):
                                        (len(color_array) - 1))]
                                )
                     added_edges[(e[1], e[0])] = 1
+
+        if filter_subgraph:
+            U = G.to_undirected()
+            nodes = nx.shortest_path(U, 'start').keys()
+            return G.subgraph(nodes)
+
         return G

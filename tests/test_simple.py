@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import networkx as nx
 from nxpd import nxpdParams, draw
 
 from graphitty.graphitty import Graphitty
@@ -35,7 +36,10 @@ def test_read_generate_graph():
         id_col='ip',
         beahivour_col='url',
         ts_col='date')
-    nx_graph = g.create_graph(min_edges=0)
+    nx_graph = g.create_graph(
+        min_edges=0,
+        filter_subgraph=True
+    )
 
     draw(nx_graph, TEST_GRAPH_OUTPUT, show=False)
 
@@ -43,3 +47,6 @@ def test_read_generate_graph():
     assert os.path.isfile(TEST_GRAPH_OUTPUT)
     filesize = os.stat(TEST_GRAPH_OUTPUT).st_size
     assert filesize > 1000
+
+    assert len(nx_graph.nodes()) > 10
+    assert nx.number_connected_components(nx_graph.to_undirected()) == 1
