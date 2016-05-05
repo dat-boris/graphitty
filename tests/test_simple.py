@@ -34,3 +34,17 @@ def test_read_generate_graph(g):
 
     assert len(nx_graph.nodes()) > 10
     assert nx.number_connected_components(nx_graph.to_undirected()) == 1
+
+
+def test_simplification(g):
+
+    g.create_graph(
+        min_edges=0,
+        filter_subgraph=True
+    )
+    nx_tree = g.simplify()
+    output_png = os.path.join(
+        ARTIFACTS_DIR,
+        'tree.png'
+    )
+    draw(nx_tree, output_png, show=False)

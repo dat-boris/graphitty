@@ -21,6 +21,7 @@ class Graphitty(object):
         self.behaviour_col = beahivour_col
         self.id_col = id_col
         self.ts_col = ts_col
+        self.G = None
         if init:
             self.build_path()
 
@@ -64,7 +65,6 @@ class Graphitty(object):
     def create_graph(self,
                      min_edges=10,
                      use_perc_label=True,
-                     no_backtrace=False,
                      filter_subgraph=True,
                      MAX_COUNT=100):
         """
@@ -85,11 +85,7 @@ class Graphitty(object):
         for i, (e, count) in enumerate(
                 self.graph_edges.most_common(MAX_COUNT)):
             if count >= min_edges:
-                if (
-                    ((e[1], e[0]) not in added_edges) and
-                    ((not no_backtrace) or
-                        (e[1] not in {e2[0] for e2 in added_edges}))
-                ):
+                if (e[1], e[0]) not in added_edges:
                     # print "Added edge: {}".format([e[0],e[1]])
                     label = count
                     if use_perc_label:
@@ -111,8 +107,9 @@ class Graphitty(object):
 
                     G.add_edge(e[0], e[1],
                                weight=count,
-                               label="{:.1f}%".format(
-                                   label) if use_perc_label else label,
+                               # label="{:.1f}%".format(
+                               #     label) if use_perc_label else label,
+                               label=count,
                                color=color_array[
                                    int((float(label) / MAX_COUNT) *
                                        (len(color_array) - 1))]
@@ -122,6 +119,52 @@ class Graphitty(object):
         if filter_subgraph:
             U = G.to_undirected()
             nodes = nx.shortest_path(U, 'start').keys()
-            return G.subgraph(nodes)
+            G = G.subgraph(nodes)
 
+        self.G = G
+        return G
+
+    def simplify(self):
+        """
+        Return an edge contract version of the graph for simplification
+
+        Algorithm:
+        1. generate a graph with nocycle (note: this is different from a
+            simple tree traversal, tree generated from traversal is minimum
+            edges spanning tree )
+
+        2. Generate the minimum cut
+
+        See:
+        * https://en.wikipedia.org/wiki/Minimum_cut
+        """
+        assert self.G, "Must run create_graph before"
+        G = self.G.copy()
+
+        seen_nodes = set()
+        edges_to_include = set()
+        for path in nx.all_simple_paths(G, source='start', target='exit'):
+            seen_nodes.update(path)
+            for i in range(len(path) - 1):
+                edges_to_include.add((path[i], path[i + 1]))
+
+        for e in G.edges():
+            if (e[0], e[1]) not in edges_to_include:
+                G.remove_edge(*e)
+
+        for n in G.nodes():
+            if n not in seen_nodes:
+                G.remove_node(n)
+
+        # for cyc in nx.simple_cycles(G):
+        #     # now we try to break each cycle with the edges that is minimal
+        #     # TODO: be smart about this
+        #     edge_chosen = (cyc[-2], cyc[-1])
+        #     G.remove_edge(*edge_chosen)
+
+        assert len(list(nx.simple_cycles(G))) == 0, "Seen cycle in graph"
+
+        cut_value, partition = nx.minimum_cut(G, 'start', 'exit',
+                                              capacity='weight')
+        print partition
         return G
