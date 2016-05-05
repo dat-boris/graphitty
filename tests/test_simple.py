@@ -10,9 +10,17 @@ FIXTURE = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     'nasa_jul95.csv'
 )
+
+ARTIFACTS_DIR = os.environ.get(
+    'CIRCLE_ARTIFACTS',
+    os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'artifacts',
+    ))
+
+
 TEST_GRAPH_OUTPUT = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    'artifacts',
+    ARTIFACTS_DIR,
     'simple_graph.png'
 )
 
