@@ -3,7 +3,7 @@
 
 [![Circle CI](https://circleci.com/gh/sketchytechky/graphitty.svg?style=svg&circle-token=<cirlce-ci-token>)](https://circleci.com/gh/sketchytechky/graphitty)
 
-[![Coverage Status](https://coveralls.io/repos/sketchytechky/graphitty/badge.svg?branch=master&service=github)](https://coveralls.io/github/sketchytechky/graphitty?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/sketchytechky/graphitty/badge.svg?branch=master)](https://coveralls.io/github/sketchytechky/graphitty?branch=master)
 
 A Python library that convert time series to direction Graph to discover the story within data.
 
@@ -28,17 +28,24 @@ Remember to add the following line to `requirements.txt`
 # How to use
 
 ```
+from graphitty.graphitty import Graphitty
 import pandas as pd
 
+# Example input data - see test_simple.py for example
 df = pd.DataFrame(
         [...],
-        columns=['timestamp','action'])
+        columns=['timestamp','action', 'user_id'])
 
-gf = GraphFrame(df, ts='timestamp', action='action')
-
-nx_graph = gf.gengraph()
+# Parsing and outputting graph
+g = Graphitty(
+    df,
+    id_col='user_id',
+    beahivour_col='action',
+    ts_col='timestamp')
+nx_graph = g.create_graph(min_edges=0)
 
 # create the beautiful directional graph
+# see https://github.com/chebee7i/nxpd for usage
 draw(nx_graph)
 ```
 
