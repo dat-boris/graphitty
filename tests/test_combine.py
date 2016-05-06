@@ -11,7 +11,6 @@ from .conftest import ARTIFACTS_DIR
 
 
 def test_name_collapse(g, g2):
-    # given 2 different graph, calculate the naming collapse
     nx_graph, name_mapping = g.shorten_name()
     output_png = os.path.join(
         ARTIFACTS_DIR,
@@ -35,7 +34,6 @@ def test_name_collapse(g, g2):
 
 
 def test_combine_graph(g, g2):
-    # given 2 differnet graphs, shorten name and combine
     g = GraphCombiner(g, g2)
     nx_combined = g.create_graph()
     output_png = os.path.join(
@@ -45,15 +43,26 @@ def test_combine_graph(g, g2):
     draw(nx_combined, output_png, show=False)
 
     assert 'start' in nx_combined.nodes()
+    assert 15 <= len(nx_combined.nodes()) <= 20
 
 
-def xxxtest_comparison(g, g2):
-    # overlay plotting on graph?
-    # given 2 differnet graphs, shorten name and combine
-    nx_combined = GraphCombiner(g, g2)
+def test_simplify_comparison(g, g2):
+    # g.simplify()
+    # g2.simplify()
 
-    comparisons = nx_combined.compare(image_folder=ARTIFACTS_DIR)
-    # return a list of comparison, with a list of graphs
-    assert len(comparison) > 3
+    g = GraphCombiner(g, g2, simplify=True)
+    nx_combined = g.create_graph()
 
-    nx_combined.add_comparison_graph(signficance=0.03)
+    output_png = os.path.join(
+        ARTIFACTS_DIR,
+        'simplify_combined.png'
+    )
+    draw(nx_combined, output_png, show=False)
+
+    assert len(nx_combined.nodes()) < 16
+
+    # comparisons = nx_combined.compare(image_folder=ARTIFACTS_DIR)
+    # # return a list of comparison, with a list of graphs
+    # assert len(comparison) > 3
+
+    # nx_combined.add_comparison_graph(signficance=0.03)

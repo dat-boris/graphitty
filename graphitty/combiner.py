@@ -11,18 +11,19 @@ from .comparator import Comparator
 
 class GraphCombiner(object):
 
-    def __init__(self, g1, g2):
-        self.G = self.combine_graph(g1, g2)
+    def __init__(self, g1, g2, simplify=False):
+        self.G = self.combine_graph(g1, g2, simplify=simplify)
 
     def create_graph(self):
         return self.G
 
     @classmethod
     def combine_graph(cls,
-                      g1, g2):
+                      g1, g2,
+                      simplify=False):
         # 1. get shortname of g1
-        nx1, _ = g1.shorten_name()
-        nx2, _ = g2.shorten_name()
+        nx1, _ = g1.shorten_name(simplify=simplify)
+        nx2, _ = g2.shorten_name(simplify=simplify)
 
         nx1.add_nodes_from(nx2)
         # nx1.add_edges_from(nx2)

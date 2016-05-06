@@ -98,6 +98,8 @@ class Graphitty(object):
                 dst_node = src_dst_mapping.get(e[1], e[1])
 
                 mapped_edge_count[(src_node, dst_node)] += count
+                # remap self.graph_edges
+                self.graph_edges = mapped_edge_count
         else:
             mapped_edge_count = self.graph_edges
 
@@ -236,6 +238,7 @@ class Graphitty(object):
         return G2
 
     def shorten_name(self,
+                     simplify=False,
                      top_terms=3,
                      black_list_term={'html'},
                      **kwargs):
@@ -244,6 +247,9 @@ class Graphitty(object):
 
         :return: nxGraph, label
         """
+        if simplify:
+            self.simplify(**kwargs)
+
         if not self.G:
             self.G = self.create_graph(**kwargs)
         G = self.G
