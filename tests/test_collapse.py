@@ -32,7 +32,6 @@ def test_name_collapse(g, g2):
     assert len(different) < 15
 
 
-
 def xxtest_combine_graph(g, g2):
     # given 2 differnet graphs, shorten name and combine
     nx_combined = GraphCombiner(g, g2)
