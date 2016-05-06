@@ -63,6 +63,7 @@ class Graphitty(object):
             count_down_items = edge_count.most_common(max_edges)
         else:
             count_down_items = edge_count.iteritems()
+            min_edges = None
 
         for i, (e, count_data) in enumerate(count_down_items):
             # convert to dict
@@ -70,7 +71,7 @@ class Graphitty(object):
                 count_data = {default_field: count_data}
 
             count = count_data.get(default_field)
-            if count < min_edges:
+            if (min_edges is not None) and (count < min_edges):
                 continue
             if skip_backref and ((e[1], e[0]) in added_edges):
                 continue
@@ -131,6 +132,7 @@ class Graphitty(object):
                 count = eattr.get(f, 0)
                 mapped_edge_count[(src_node, dst_node)][f] += count
 
+        import pdb; pdb.set_trace()
         self.G = G = self.__create_graph_from_edges(mapped_edge_count)
         return G
 
@@ -165,13 +167,16 @@ class Graphitty(object):
             for n0, n1, d in graph_edges
         }
 
-        # TODO: better colour map
-        # http://stackoverflow.com/questions/14777066/
-        #   matplotlib-discrete-colorbar
-        color_array = ['red', 'orange', 'yellow', 'grey']
-        if use_perc_label:
-            color_array.reverse()
-        max_weight = 100 if use_perc_label else max(mapped_edge_count.values())
+        if render_func is None:
+            # TODO: better colour map
+            # http://stackoverflow.com/questions/14777066/
+            #   matplotlib-discrete-colorbar
+            color_array = ['red', 'orange', 'yellow', 'grey']
+            if use_perc_label:
+                color_array.reverse()
+
+            max_weight = 100 if use_perc_label else max(
+                mapped_edge_count.values())
 
         def default_renderer(G, e, count):
             if use_perc_label:
@@ -259,6 +264,7 @@ class Graphitty(object):
         G2 = self.remap_graph(
             node_mapping=relabel_mapping,
             combine_fields=combine_fields)
+        assert len(G2.nodes()) > 0
         return G2
 
     def shorten_name(self,

@@ -19,17 +19,15 @@ class GraphCombiner(Graphitty):
     def create_graph(self):
         return self.G
 
-    @classmethod
-    def combine_graph(cls,
+    def combine_graph(self,
                       g1, g2,
                       simplify=False):
         # 1. get shortname of g1
         g1.shorten_name()
         g2.shorten_name()
-        return cls.combine_nx_graph(g1.G, g2.G)
+        return self.combine_nx_graph(g1.G, g2.G)
 
-    @classmethod
-    def combine_nx_graph(cls, nx1, nx2):
+    def combine_nx_graph(self, nx1, nx2):
         nx1.add_nodes_from(nx2)
         # nx1.add_edges_from(nx2)
         edge_data = {}
@@ -54,7 +52,7 @@ class GraphCombiner(Graphitty):
 
     def simplify(self):
         super(GraphCombiner, self).simplify(
-            combine_fields=[['weight1', 'weight2']])
+            combine_fields=['weight1', 'weight2'])
 
     def do_compare(self):
         # now execute comparison
