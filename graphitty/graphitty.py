@@ -98,6 +98,25 @@ class Graphitty(object):
                 add_edge_callback(path[-2], path[-1])
         return path
 
+    def remap_graph(self, node_mapping):
+        G = self.G
+        mapped_edge_count = Counter()
+        src_dst_mapping = {}
+        for dst, src_list in node_mapping.iteritems():
+            for src in src_list:
+                src_dst_mapping[src] = dst
+
+        for i, e in enumerate(G.edges()):
+            count = self.G.get_edge_data(*e)['weight']
+
+            src_node = src_dst_mapping.get(e[0], e[0])
+            dst_node = src_dst_mapping.get(e[1], e[1])
+
+            mapped_edge_count[(src_node, dst_node)] += count
+
+        self.G = G = self.__create_graph_from_edges(mapped_edge_count)
+        return G
+
     def create_graph(self,
                      min_edges=0,
                      use_perc_label=True,
@@ -113,23 +132,8 @@ class Graphitty(object):
         :return: Network x graph
         """
         G = self.G
-
         if node_mapping:
-            mapped_edge_count = Counter()
-            src_dst_mapping = {}
-            for dst, src_list in node_mapping.iteritems():
-                for src in src_list:
-                    src_dst_mapping[src] = dst
-
-            for i, e in enumerate(G.edges()):
-                count = self.G.get_edge_data(*e)['weight']
-
-                src_node = src_dst_mapping.get(e[0], e[0])
-                dst_node = src_dst_mapping.get(e[1], e[1])
-
-                mapped_edge_count[(src_node, dst_node)] += count
-
-            self.G = G = self.__create_graph_from_edges(mapped_edge_count)
+            G = self.remap_graph(node_mapping)
 
         G = self.render_label(G, use_perc_label=use_perc_label)
 
