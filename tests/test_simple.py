@@ -32,14 +32,14 @@ def test_read_generate_graph(g):
 
 
 def test_simplification(g):
+    output_png = os.path.join(ARTIFACTS_DIR, 'tree.png')
+
+    if os.path.isfile(output_png):
+        os.remove(output_png)
 
     g.create_graph(
         min_edges=0,
         filter_subgraph=True
     )
     nx_tree = g.simplify(min_edges=0)
-    output_png = os.path.join(
-        ARTIFACTS_DIR,
-        'tree.png'
-    )
     draw(nx_tree, output_png, show=False)

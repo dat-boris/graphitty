@@ -18,33 +18,65 @@ class Graphitty(object):
                  ts_col,
                  init=True
                  ):
-        self.graph_edges = Counter()
         self.df = df
         self.behaviour_col = beahivour_col
         self.id_col = id_col
         self.ts_col = ts_col
         self.G = None
+        self.add_edge_callback = None
+
         if init:
             self.build_path()
+            assert len(self.G.nodes()) > 0
 
-    def build_path(self):
+    def build_path(self,
+                   ):
         """
-        Parse dataframe into `graph_edges`
+        Parse dataframe into Network X edges
         """
+        edge_count = Counter()
+
+        def add_edge_callback(n1, n2):
+            edge_count[(n1, n2)] += 1
+
+        self.add_edge_callback = add_edge_callback
         path_aggregate = pd.DataFrame(
             self.df.groupby(self.id_col).apply(
                 self.get_template_path),
             columns=['path']
         )
+
+        self.G = self.__create_graph_from_edges(edge_count)
+
+        # now given the edges, create the nxgraph
         return path_aggregate
 
-    def get_template_path(self, group, add_exit=True):
+    def __create_graph_from_edges(self, edge_count,
+                                  min_edges=0,
+                                  skip_backref=True,
+                                  max_edges=200):
+        G = nx.DiGraph()
+        added_edges = {}
+        for i, (e, count) in enumerate(edge_count.most_common(max_edges)):
+            if count >= min_edges:
+                if skip_backref and ((e[1], e[0]) in added_edges):
+                    continue
+                # print "Added edge: {}".format([e[0],e[1]])
+                G.add_edge(e[0], e[1], weight=count)
+                added_edges[(e[1], e[0])] = 1
+        return G
+
+    def get_template_path(self, group,
+                          add_exit=True,
+                          add_edge_callback=None):
         """
         Internal function for parsing path. Can be overridden to customize
         behaviour for generating path
 
         :param: add_exit [bool] Add an exit node
         """
+        if not add_edge_callback:
+            add_edge_callback = self.add_edge_callback
         sorted_time = group.sort(self.ts_col)
         seen_templates = {}
         path = ['start']
@@ -58,11 +90,13 @@ class Graphitty(object):
                 seen_templates[t] = 1
                 path.append(t)
                 if len(path) >= 2:
-                    self.graph_edges[(path[-2], path[-1])] += 1
+                    if add_edge_callback:
+                        add_edge_callback(path[-2], path[-1])
         if add_exit:
             path.append('exit')
-            self.graph_edges[(path[-2], path[-1])] += 1
-        return ','.join(path)
+            if add_edge_callback:
+                add_edge_callback(path[-2], path[-1])
+        return path
 
     def create_graph(self,
                      min_edges=0,
@@ -78,47 +112,30 @@ class Graphitty(object):
 
         :return: Network x graph
         """
-        G = nx.DiGraph()
-        added_edges = {}
-
-        # consider node_mapping data
-        # build a mapping of the src -> dst node
-        mapped_edge_count = Counter()
+        G = self.G
 
         if node_mapping:
+            mapped_edge_count = Counter()
             src_dst_mapping = {}
             for dst, src_list in node_mapping.iteritems():
                 for src in src_list:
                     src_dst_mapping[src] = dst
 
-            for i, (e, count) in enumerate(
-                    self.graph_edges.most_common(MAX_COUNT)):
+            for i, e in enumerate(G.edges()):
+                count = self.G.get_edge_data(*e)['weight']
 
                 src_node = src_dst_mapping.get(e[0], e[0])
                 dst_node = src_dst_mapping.get(e[1], e[1])
 
                 mapped_edge_count[(src_node, dst_node)] += count
-                # remap self.graph_edges
-                self.graph_edges = mapped_edge_count
-        else:
-            mapped_edge_count = self.graph_edges
 
-        for i, (e, count) in enumerate(
-                mapped_edge_count.most_common(MAX_COUNT)):
-
-            if count >= min_edges:
-                if skip_backref and ((e[1], e[0]) in added_edges):
-                    continue
-                # print "Added edge: {}".format([e[0],e[1]])
-                G.add_edge(e[0], e[1], weight=count)
-                added_edges[(e[1], e[0])] = 1
+            self.G = G = self.__create_graph_from_edges(mapped_edge_count)
 
         G = self.render_label(G, use_perc_label=use_perc_label)
 
         if filter_subgraph:
             G = self.filter_subgraph(G)
 
-        self.G = G
         return G
 
     @classmethod
