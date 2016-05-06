@@ -21,9 +21,15 @@ def run_simplication(csv, output_png):
     # draw non-condensed version
     nx_orig = g.create_graph(
         min_edges=0,
-        filter_subgraph=True
+        filter_subgraph=False
     )
     draw(nx_orig, "original_" + output_png, show=False)
+
+    nx_orig = g.create_graph(
+        min_edges=0,
+        filter_subgraph=True
+    )
+    draw(nx_orig, "simplified_" + output_png, show=False)
 
     nx_condense = g.simplify()
     draw(nx_condense, output_png, show=False)

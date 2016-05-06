@@ -2,12 +2,7 @@ import os
 import networkx as nx
 from nxpd import draw
 
-ARTIFACTS_DIR = os.environ.get(
-    'CIRCLE_ARTIFACTS',
-    os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        'artifacts',
-    ))
+from .conftest import ARTIFACTS_DIR
 
 
 TEST_GRAPH_OUTPUT = os.path.join(
