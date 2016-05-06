@@ -1,11 +1,13 @@
 """
 Test function with collapsing multiple graphs
 """
+import os
+from nxpd import draw
 
 from .conftest import ARTIFACTS_DIR
 
 
-def xxxtest_name_collapse(g):
+def test_name_collapse(g):
     # given 2 different graph, calculate the naming collapse
     nx_graph, name_mapping = g.shorten_name()
     output_png = os.path.join(
@@ -14,7 +16,6 @@ def xxxtest_name_collapse(g):
     )
     draw(nx_graph, output_png, show=False)
 
-    assert 'start' in name_mapping
     assert 5 <= len(name_mapping) <= 10
 
 

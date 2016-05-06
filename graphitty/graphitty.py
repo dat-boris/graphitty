@@ -1,3 +1,5 @@
+import math
+import re
 from collections import Counter
 
 import networkx as nx
@@ -205,3 +207,66 @@ class Graphitty(object):
         })
         G2 = self.create_graph(**kwargs)
         return G2
+
+    def shorten_name(self,
+                     top_terms=3,
+                     black_list_term={'html'},
+                     **kwargs):
+        """
+        Shorten node name of graph
+
+        :return: nxGraph, label
+        """
+        if not self.G:
+            self.G = self.create_graph(**kwargs)
+        G = self.G
+
+        relabel_mapping = {}
+
+        # use inverse doc frequency mapping
+        def tokenizer(s):
+            return [
+                t for t in re.split(r'[^\w\d-]+', s)
+                if len(t) >= 3 and t not in black_list_term
+            ]
+        token_docs = [tokenizer(n) for n in G.nodes()]
+        tf_idf_counts = tf_idf(token_docs)
+        for i, n in enumerate(G.nodes()):
+            tf_counter = tf_idf_counts[i]
+            name = ' + '.join(
+                [
+                    t[0] for t in tf_counter.most_common(top_terms)
+                ])
+            relabel_mapping[name] = [n]
+
+        kwargs.update({
+            'node_mapping': relabel_mapping
+        })
+        G2 = self.create_graph(**kwargs)
+        return G2, relabel_mapping
+
+
+def tf_idf(docs):
+    """
+    Calculate tf, idf for each item
+    """
+    doc_freq = Counter()
+    doc_term_freq = []
+    for i, doc in enumerate(docs):
+        term_freq = Counter()
+        for term in doc:
+            term_freq[term] += 1
+        for term in list(set(doc)):
+            doc_freq[term] += 1
+        doc_term_freq.append(term_freq)
+
+    number_of_docs = len(docs)
+    all_df_idf = []
+    for term_freq in doc_term_freq:
+        df_idf = Counter()
+        for term, tf_count in term_freq.most_common(10):
+            df_idf[term] = tf_count * math.log(
+                (1. * number_of_docs / doc_freq[term]))
+        all_df_idf.append(df_idf)
+
+    return all_df_idf
