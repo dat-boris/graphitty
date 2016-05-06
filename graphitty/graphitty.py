@@ -132,7 +132,6 @@ class Graphitty(object):
                 count = eattr.get(f, 0)
                 mapped_edge_count[(src_node, dst_node)][f] += count
 
-        import pdb; pdb.set_trace()
         self.G = G = self.__create_graph_from_edges(mapped_edge_count)
         return G
 
@@ -268,6 +267,7 @@ class Graphitty(object):
         return G2
 
     def shorten_name(self,
+                     simplify=True,
                      top_terms=3,
                      black_list_term={'html'}):
         """
@@ -275,6 +275,9 @@ class Graphitty(object):
 
         :return: nxGraph, label
         """
+        if simplify:
+            self.simplify()
+
         G = self.G
         relabel_mapping = {}
         # use inverse doc frequency mapping

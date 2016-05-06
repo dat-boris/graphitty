@@ -23,8 +23,8 @@ class GraphCombiner(Graphitty):
                       g1, g2,
                       simplify=False):
         # 1. get shortname of g1
-        g1.shorten_name()
-        g2.shorten_name()
+        g1.shorten_name(simplify=simplify)
+        g2.shorten_name(simplify=simplify)
         return self.combine_nx_graph(g1.G, g2.G)
 
     def combine_nx_graph(self, nx1, nx2):
@@ -51,8 +51,7 @@ class GraphCombiner(Graphitty):
         return nx1
 
     def simplify(self):
-        super(GraphCombiner, self).simplify(
-            combine_fields=['weight1', 'weight2'])
+        raise NotImplementedError("Cannot simplify combined graph")
 
     def do_compare(self):
         # now execute comparison
