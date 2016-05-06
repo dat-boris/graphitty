@@ -178,23 +178,15 @@ class Graphitty(object):
                       key=lambda p: G[p[0]][p[1]]['weight'],
                       reverse=True)
 
-    def simplify(self,
-                 min_edges=0,
-                 use_perc_label=True,
-                 filter_subgraph=True,
-                 skip_backref=True,
-                 MAX_COUNT=100):
+    def simplify(self, **kwargs):
         """
         Return an edge contract version of the graph for simplification
         """
-        G = self.create_graph(
-            min_edges=min_edges,
-            use_perc_label=use_perc_label,
-            filter_subgraph=False,
-            skip_backref=skip_backref,
-            # note that we use empty node_mapping
-            node_mapping=None,
-            MAX_COUNT=MAX_COUNT)
+        kwargs.update({
+            'node_mapping': None,
+            'filter_subgraph': False
+        })
+        G = self.create_graph(**kwargs)
 
         scc = list(nx.strongly_connected_components(G))
         G = nx.condensation(G, scc=scc)
@@ -207,17 +199,9 @@ class Graphitty(object):
             )
             relabel_mapping[node_name] = scc[node]
 
-        G2 = self.create_graph(
-            min_edges=min_edges,
-            use_perc_label=use_perc_label,
-            # disable subgraph filtering
-            # (since 'start' node might not be there)
-            filter_subgraph=False,
-            skip_backref=skip_backref,
-            node_mapping=relabel_mapping,
-            MAX_COUNT=MAX_COUNT)
-
-        if filter_subgraph:
-            G2 = self.filter_subgraph(G2)
-
+        kwargs.update({
+            'node_mapping': relabel_mapping,
+            'filter_subgraph': True
+        })
+        G2 = self.create_graph(**kwargs)
         return G2
