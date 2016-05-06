@@ -19,7 +19,7 @@ def test_name_collapse(g, g2):
     draw(nx_graph, output_png, show=False)
     _, name_mapping2 = g2.shorten_name()
 
-    assert 5 <= len(name_mapping) <= 10
+    assert 5 <= len(name_mapping) <= 13
 
     # let's check that the name converge (nothing exotically different)
     def get_node_names(mapping):
