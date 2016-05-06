@@ -43,7 +43,7 @@ def test_combine_graph(g, g2):
     draw(nx_combined, output_png, show=False)
 
     assert 'start' in nx_combined.nodes()
-    assert 15 <= len(nx_combined.nodes()) <= 20
+    assert 12 <= len(nx_combined.nodes()) <= 20
 
 
 def test_simplify_comparison(g, g2):
@@ -59,7 +59,7 @@ def test_simplify_comparison(g, g2):
     )
     draw(nx_combined, output_png, show=False)
 
-    assert len(nx_combined.nodes()) < 16
+    assert len(nx_combined.nodes()) < 20
 
     # comparisons = nx_combined.compare(image_folder=ARTIFACTS_DIR)
     # # return a list of comparison, with a list of graphs
