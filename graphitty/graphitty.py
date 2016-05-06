@@ -81,13 +81,6 @@ class Graphitty(object):
         G = nx.DiGraph()
         added_edges = {}
 
-        # TODO: better colour map
-        # http://stackoverflow.com/questions/14777066/
-        #   matplotlib-discrete-colorbar
-        color_array = ['red', 'orange', 'yellow', 'grey']
-        if use_perc_label:
-            color_array.reverse()
-
         # consider node_mapping data
         # build a mapping of the src -> dst node
         mapped_edge_count = Counter()
@@ -114,45 +107,71 @@ class Graphitty(object):
             if count >= min_edges:
                 if skip_backref and ((e[1], e[0]) in added_edges):
                     continue
-
                 # print "Added edge: {}".format([e[0],e[1]])
-                label = count
-                if use_perc_label:
-                    # get all in edge
-                    in_count = sum([
-                        c for (n0, n1), c
-                        in mapped_edge_count.iteritems()
-                        if n1 == e[0]
-                    ])
-                    if in_count == 0:
-                        out_count = sum([
-                            c for (n0, n1), c
-                            in mapped_edge_count.iteritems()
-                            if n0 == e[0]
-                        ])
-                        label = 100. * count / out_count
-                    else:
-                        label = 100. * count / in_count
-
-                # TODO: need to fix
-                try:
-                    edge_color = color_array[
-                        int((float(label) / MAX_COUNT) *
-                            (len(color_array) - 1))]
-                except IndexError:
-                    edge_color = 'grey'
-
-                G.add_edge(e[0], e[1],
-                           weight=count,
-                           label="{:.1f}%".format(
-                               label) if use_perc_label else label,
-                           color=edge_color)
+                G.add_edge(e[0], e[1], weight=count)
                 added_edges[(e[1], e[0])] = 1
+
+        G = self.render_label(G, use_perc_label=use_perc_label)
 
         if filter_subgraph:
             G = self.filter_subgraph(G)
 
         self.G = G
+        return G
+
+    @classmethod
+    def render_label(cls, G,
+                     use_perc_label=True,
+                     weight_label='weight'):
+        """
+        Apply label rendering to graph
+        """
+        # TODO: better colour map
+        # http://stackoverflow.com/questions/14777066/
+        #   matplotlib-discrete-colorbar
+        color_array = ['red', 'orange', 'yellow', 'grey']
+        if use_perc_label:
+            color_array.reverse()
+
+        graph_edges = G.edges(data=True)
+        mapped_edge_count = {
+            (n0, n1): d.get(weight_label)
+            for n0, n1, d in graph_edges
+        }
+
+        max_weight = 100 if use_perc_label else max(mapped_edge_count.values())
+
+        for e, count in mapped_edge_count.iteritems():
+            if use_perc_label:
+                # get all in edge
+                in_count = sum([
+                    c for (n0, n1), c
+                    in mapped_edge_count.iteritems()
+                    if n1 == e[0]
+                ])
+                if in_count == 0:
+                    out_count = sum([
+                        c for (n0, n1), c
+                        in mapped_edge_count.iteritems()
+                        if n0 == e[0]
+                    ])
+                    label = 100. * count / out_count
+                else:
+                    label = 100. * count / in_count
+            else:
+                label = count
+
+            try:
+                edge_color = color_array[
+                    int((float(label) / max_weight) *
+                        (len(color_array) - 1))]
+            except IndexError:
+                edge_color = 'grey'
+
+            G[e[0]][e[1]].update({
+                'label': "{:.1f}%".format(label) if use_perc_label else label,
+                'color': edge_color
+            })
         return G
 
     def get_node(self, G, name):
