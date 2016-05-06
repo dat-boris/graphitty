@@ -243,25 +243,17 @@ class Graphitty(object):
         return G2
 
     def shorten_name(self,
-                     simplify=False,
                      top_terms=3,
-                     black_list_term={'html'},
-                     **kwargs):
+                     black_list_term={'html'}):
         """
         Shorten node name of graph
 
         :return: nxGraph, label
         """
-        assert not simplify
-        # if simplify:
-        #     self.simplify(**kwargs)
-
-        # if not self.G:
-        #     self.G = self.create_graph(**kwargs)
-        # G = self.G
+        G = self.G
         relabel_mapping = {}
-
         # use inverse doc frequency mapping
+
         def tokenizer(s):
             return [
                 t for t in re.split(r'[^\w\d-]+', s)
@@ -277,11 +269,8 @@ class Graphitty(object):
                 ])
             relabel_mapping[name] = [n]
 
-        kwargs.update({
-            'node_mapping': relabel_mapping
-        })
-        G2 = self.create_graph(**kwargs)
-        return G2, relabel_mapping
+        self.remap_graph(relabel_mapping)
+        return relabel_mapping
 
 
 def tf_idf(docs, max_doc_freq=None):
