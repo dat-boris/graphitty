@@ -59,14 +59,14 @@ class GraphCombiner(Graphitty):
         G = self.G
         for n1, n2 in G.edges():
             eattr = G.get_edge_data(n1, n2)
-            nx1[n1][n2]['comparison'] = Comparator.compare_value(
+            G[n1][n2]['comparison'] = Comparator.compare_value(
                 eattr.get('weight1', 0),
                 eattr.get('weight2', 0),
                 total1=self.total1,
                 total2=self.total2
             )
 
-    def render_graph(self):
+    def render_graph(self, filter_subgraph=True):
 
         def render_func(G, edge, count, threshold=0.03):
             eattr = G.get_edge_data(*edge)
@@ -84,7 +84,11 @@ class GraphCombiner(Graphitty):
                     color = 'green'
             return label, color
 
-        return self.render_label(self.G,
-                                 use_perc_label=False,
-                                 weight_label='comparison',
-                                 render_func=render_func)
+        G = self.render_label(self.G,
+                              use_perc_label=False,
+                              weight_label='comparison',
+                              render_func=render_func)
+
+        if filter_subgraph:
+            G = self.filter_subgraph(G)
+        return G

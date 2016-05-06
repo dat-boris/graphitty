@@ -240,7 +240,7 @@ class Graphitty(object):
                                     target=self.get_node(G, 'exit')
                                     )
         return sorted(paths,
-                      key=lambda p: G[p[0]][p[1]]['weight'],
+                      key=lambda p: G[p[0]][p[1]].get('weight'),
                       reverse=True)
 
     def simplify(self, combine_fields=['weight']):

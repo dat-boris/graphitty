@@ -39,6 +39,7 @@ def test_name_collapse(g, g2):
 
 def test_combine_graph(g, g2):
     g = GraphCombiner(g, g2)
+    g.do_compare()
     nx_combined = g.render_graph()
     output_png = os.path.join(
         ARTIFACTS_DIR,
@@ -51,11 +52,10 @@ def test_combine_graph(g, g2):
 
 
 def xxtest_simplify_comparison(g, g2):
-    # g.simplify()
-    # g2.simplify()
-
-    g = GraphCombiner(g, g2, simplify=True)
-    nx_combined = g.create_graph()
+    g = GraphCombiner(g, g2)
+    g.simplify()
+    g.do_compare()
+    nx_combined = g.render_graph()
 
     output_png = os.path.join(
         ARTIFACTS_DIR,
