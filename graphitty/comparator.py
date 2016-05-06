@@ -1,7 +1,15 @@
+from __future__ import division
+
 import pandas as pd
 
 
 class Comparator(object):
+
+    @staticmethod
+    def compare_value(v1, v2,
+                      total1,
+                      total2):
+        return v1 / total1 - v2 / total2
 
     @staticmethod
     def compare_list(df1, df2,

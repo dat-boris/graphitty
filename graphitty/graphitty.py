@@ -122,16 +122,11 @@ class Graphitty(object):
     @classmethod
     def render_label(cls, G,
                      use_perc_label=True,
-                     weight_label='weight'):
+                     weight_label='weight',
+                     render_func=None):
         """
         Apply label rendering to graph
         """
-        # TODO: better colour map
-        # http://stackoverflow.com/questions/14777066/
-        #   matplotlib-discrete-colorbar
-        color_array = ['red', 'orange', 'yellow', 'grey']
-        if use_perc_label:
-            color_array.reverse()
 
         graph_edges = G.edges(data=True)
         mapped_edge_count = {
@@ -139,9 +134,15 @@ class Graphitty(object):
             for n0, n1, d in graph_edges
         }
 
+        # TODO: better colour map
+        # http://stackoverflow.com/questions/14777066/
+        #   matplotlib-discrete-colorbar
+        color_array = ['red', 'orange', 'yellow', 'grey']
+        if use_perc_label:
+            color_array.reverse()
         max_weight = 100 if use_perc_label else max(mapped_edge_count.values())
 
-        for e, count in mapped_edge_count.iteritems():
+        def default_renderer(G, e, count):
             if use_perc_label:
                 # get all in edge
                 in_count = sum([
@@ -167,9 +168,16 @@ class Graphitty(object):
                         (len(color_array) - 1))]
             except IndexError:
                 edge_color = 'grey'
+            label = "{:.1f}%".format(label) if use_perc_label else label
+            return label, edge_color
 
+        if render_func is None:
+            render_func = default_renderer
+
+        for e, count in mapped_edge_count.iteritems():
+            label, edge_color = render_func(G, e, count)
             G[e[0]][e[1]].update({
-                'label': "{:.1f}%".format(label) if use_perc_label else label,
+                'label': label,
                 'color': edge_color
             })
         return G
