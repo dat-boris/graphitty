@@ -1,6 +1,6 @@
 import math
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 
 import networkx as nx
 import pandas as pd
@@ -54,16 +54,29 @@ class Graphitty(object):
     def __create_graph_from_edges(self, edge_count,
                                   min_edges=0,
                                   skip_backref=True,
-                                  max_edges=200):
+                                  max_edges=200,
+                                  default_field='weight'):
         G = nx.DiGraph()
         added_edges = {}
-        for i, (e, count) in enumerate(edge_count.most_common(max_edges)):
-            if count >= min_edges:
-                if skip_backref and ((e[1], e[0]) in added_edges):
-                    continue
-                # print "Added edge: {}".format([e[0],e[1]])
-                G.add_edge(e[0], e[1], weight=count)
-                added_edges[(e[1], e[0])] = 1
+
+        if isinstance(edge_count, Counter):
+            count_down_items = edge_count.most_common(max_edges)
+        else:
+            count_down_items = edge_count.iteritems()
+
+        for i, (e, count_data) in enumerate(count_down_items):
+            # convert to dict
+            if not isinstance(count_data, dict):
+                count_data = {default_field: count_data}
+
+            count = count_data.get(default_field)
+            if count < min_edges:
+                continue
+            if skip_backref and ((e[1], e[0]) in added_edges):
+                continue
+            # print "Added edge: {}".format([e[0],e[1]])
+            G.add_edge(e[0], e[1], **count_data)
+            added_edges[(e[1], e[0])] = 1
         return G
 
     def get_template_path(self, group,
@@ -98,21 +111,25 @@ class Graphitty(object):
                 add_edge_callback(path[-2], path[-1])
         return path
 
-    def remap_graph(self, node_mapping):
+    def remap_graph(self,
+                    node_mapping,
+                    combine_fields=['weight']):
         G = self.G
-        mapped_edge_count = Counter()
+        mapped_edge_count = defaultdict(Counter)
         src_dst_mapping = {}
         for dst, src_list in node_mapping.iteritems():
             for src in src_list:
                 src_dst_mapping[src] = dst
 
         for i, e in enumerate(G.edges()):
-            count = self.G.get_edge_data(*e)['weight']
+            eattr = self.G.get_edge_data(*e)
 
             src_node = src_dst_mapping.get(e[0], e[0])
             dst_node = src_dst_mapping.get(e[1], e[1])
 
-            mapped_edge_count[(src_node, dst_node)] += count
+            for f in combine_fields:
+                count = eattr.get(f, 0)
+                mapped_edge_count[(src_node, dst_node)][f] += count
 
         self.G = G = self.__create_graph_from_edges(mapped_edge_count)
         return G
@@ -221,7 +238,7 @@ class Graphitty(object):
                       key=lambda p: G[p[0]][p[1]]['weight'],
                       reverse=True)
 
-    def simplify(self, **kwargs):
+    def simplify(self, combine_fields=['weight']):
         """
         Return an edge contract version of the graph for simplification
         """
@@ -239,7 +256,9 @@ class Graphitty(object):
             )
             relabel_mapping[node_name] = scc[node]
 
-        G2 = self.remap_graph(node_mapping=relabel_mapping)
+        G2 = self.remap_graph(
+            node_mapping=relabel_mapping,
+            combine_fields=combine_fields)
         return G2
 
     def shorten_name(self,
@@ -267,10 +286,8 @@ class Graphitty(object):
                 [
                     t[0] for t in tf_counter.most_common(top_terms)
                 ])
-            relabel_mapping[name] = [n]
-
-        self.remap_graph(relabel_mapping)
-        return relabel_mapping
+            relabel_mapping[n] = name
+        self.G = nx.relabel_nodes(G, relabel_mapping)
 
 
 def tf_idf(docs, max_doc_freq=None):

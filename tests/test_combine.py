@@ -39,6 +39,7 @@ def test_name_collapse(g, g2):
 
 def test_combine_graph(g, g2):
     g = GraphCombiner(g, g2)
+    g.simplify()
     nx_combined = g.render_graph()
     output_png = os.path.join(
         ARTIFACTS_DIR,

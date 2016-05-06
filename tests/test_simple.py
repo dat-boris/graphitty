@@ -35,7 +35,7 @@ def test_simplification(g):
     if os.path.isfile(output_png):
         os.remove(output_png)
 
-    g.simplify(min_edges=0)
+    g.simplify()
     nx_tree = g.render_graph(
         filter_subgraph=True
     )
