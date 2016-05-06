@@ -28,6 +28,7 @@ def parse_graph(csv):
     )
     draw_with_output(nx_orig, "original_" + output_png)
 
+    g.shorten_name(simplify=True)
     nx_orig = g.render_graph(
         filter_subgraph=True
     )
