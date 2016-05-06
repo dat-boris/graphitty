@@ -246,10 +246,16 @@ class Graphitty(object):
         return G2, relabel_mapping
 
 
-def tf_idf(docs):
+def tf_idf(docs, max_doc_freq=None):
     """
     Calculate tf, idf for each item
+
+    :param: max_doc_freq - only allow terms which are unique
     """
+    number_of_docs = len(docs)
+    if not max_doc_freq:
+        max_doc_freq = number_of_docs
+
     doc_freq = Counter()
     doc_term_freq = []
     for i, doc in enumerate(docs):
@@ -260,13 +266,16 @@ def tf_idf(docs):
             doc_freq[term] += 1
         doc_term_freq.append(term_freq)
 
-    number_of_docs = len(docs)
     all_df_idf = []
     for term_freq in doc_term_freq:
         df_idf = Counter()
         for term, tf_count in term_freq.most_common(10):
+            if doc_freq[term] > max_doc_freq:
+                continue
             df_idf[term] = tf_count * math.log(
                 (1. * number_of_docs / doc_freq[term]))
+        assert len(df_idf) > 0, \
+            "Cannot find unique name for doc: {}".format(term_freq)
         all_df_idf.append(df_idf)
 
     return all_df_idf
