@@ -1,22 +1,8 @@
 import os
-import pandas as pd
-from nxpd import nxpdParams, draw
+import networkx as nx
+from nxpd import draw
 
-from graphitty.graphitty import Graphitty
-
-# HTTP log from http://ita.ee.lbl.gov/html/contrib/NASA-HTTP.html
-
-FIXTURE = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    'nasa_jul95.csv'
-)
-
-ARTIFACTS_DIR = os.environ.get(
-    'CIRCLE_ARTIFACTS',
-    os.path.join(
-        os.path.dirname(os.path.abspath(__file__)),
-        'artifacts',
-    ))
+from .conftest import ARTIFACTS_DIR
 
 
 TEST_GRAPH_OUTPUT = os.path.join(
@@ -25,17 +11,14 @@ TEST_GRAPH_OUTPUT = os.path.join(
 )
 
 
-def test_read_generate_graph():
+def test_read_generate_graph(g):
     if os.path.isfile(TEST_GRAPH_OUTPUT):
         os.remove(TEST_GRAPH_OUTPUT)
 
-    df = pd.read_csv(FIXTURE)
-    g = Graphitty(
-        df,
-        id_col='ip',
-        beahivour_col='url',
-        ts_col='date')
-    nx_graph = g.create_graph(min_edges=0)
+    nx_graph = g.create_graph(
+        min_edges=0,
+        filter_subgraph=True
+    )
 
     draw(nx_graph, TEST_GRAPH_OUTPUT, show=False)
 
@@ -43,3 +26,20 @@ def test_read_generate_graph():
     assert os.path.isfile(TEST_GRAPH_OUTPUT)
     filesize = os.stat(TEST_GRAPH_OUTPUT).st_size
     assert filesize > 1000
+
+    assert len(nx_graph.nodes()) > 5
+    assert nx.number_connected_components(nx_graph.to_undirected()) == 1
+
+
+def test_simplification(g):
+
+    g.create_graph(
+        min_edges=0,
+        filter_subgraph=True
+    )
+    nx_tree = g.simplify(min_edges=0)
+    output_png = os.path.join(
+        ARTIFACTS_DIR,
+        'tree.png'
+    )
+    draw(nx_tree, output_png, show=False)
