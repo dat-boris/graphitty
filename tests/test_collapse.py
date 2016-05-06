@@ -5,6 +5,8 @@ import os
 from itertools import chain
 from nxpd import draw
 
+from graphitty.combiner import GraphCombiner
+
 from .conftest import ARTIFACTS_DIR
 
 
@@ -32,17 +34,20 @@ def test_name_collapse(g, g2):
     assert len(different) < 15
 
 
-def xxtest_combine_graph(g, g2):
+def test_combine_graph(g, g2):
     # given 2 differnet graphs, shorten name and combine
-    nx_combined = GraphCombiner(g, g2)
+    g = GraphCombiner(g, g2)
+    nx_combined = g.create_graph()
     output_png = os.path.join(
         ARTIFACTS_DIR,
         'combined.png'
     )
-    draw(nx_graph, output_png, show=False)
+    draw(nx_combined, output_png, show=False)
+
+    assert 'start' in nx_combined.nodes()
 
 
-def xxtest_comparison(g, g2):
+def xxxtest_comparison(g, g2):
     # overlay plotting on graph?
     # given 2 differnet graphs, shorten name and combine
     nx_combined = GraphCombiner(g, g2)
@@ -52,9 +57,3 @@ def xxtest_comparison(g, g2):
     assert len(comparison) > 3
 
     nx_combined.add_comparison_graph(signficance=0.03)
-
-    output_png = os.path.join(
-        ARTIFACTS_DIR,
-        'combined.png'
-    )
-    draw(nx_graph, output_png, show=False)
