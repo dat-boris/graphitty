@@ -15,11 +15,9 @@ def test_read_generate_graph(g):
     if os.path.isfile(TEST_GRAPH_OUTPUT):
         os.remove(TEST_GRAPH_OUTPUT)
 
-    nx_graph = g.create_graph(
-        min_edges=0,
+    nx_graph = g.render_graph(
         filter_subgraph=True
     )
-
     draw(nx_graph, TEST_GRAPH_OUTPUT, show=False)
 
     # some data is drawn
@@ -37,9 +35,8 @@ def test_simplification(g):
     if os.path.isfile(output_png):
         os.remove(output_png)
 
-    g.create_graph(
-        min_edges=0,
+    g.simplify(min_edges=0)
+    nx_tree = g.render_graph(
         filter_subgraph=True
     )
-    nx_tree = g.simplify(min_edges=0)
     draw(nx_tree, output_png, show=False)

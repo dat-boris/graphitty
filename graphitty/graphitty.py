@@ -117,13 +117,9 @@ class Graphitty(object):
         self.G = G = self.__create_graph_from_edges(mapped_edge_count)
         return G
 
-    def create_graph(self,
-                     min_edges=0,
+    def render_graph(self,
                      use_perc_label=True,
-                     filter_subgraph=True,
-                     skip_backref=True,
-                     node_mapping=None,
-                     MAX_COUNT=100):
+                     filter_subgraph=True):
         """
         Create a networkx
 
@@ -132,14 +128,9 @@ class Graphitty(object):
         :return: Network x graph
         """
         G = self.G
-        if node_mapping:
-            G = self.remap_graph(node_mapping)
-
         G = self.render_label(G, use_perc_label=use_perc_label)
-
         if filter_subgraph:
             G = self.filter_subgraph(G)
-
         return G
 
     @classmethod
@@ -234,11 +225,8 @@ class Graphitty(object):
         """
         Return an edge contract version of the graph for simplification
         """
-        kwargs.update({
-            'node_mapping': None,
-            'filter_subgraph': False
-        })
-        G = self.create_graph(**kwargs)
+        assert self.G
+        G = self.G
 
         scc = list(nx.strongly_connected_components(G))
         G = nx.condensation(G, scc=scc)
@@ -251,11 +239,7 @@ class Graphitty(object):
             )
             relabel_mapping[node_name] = scc[node]
 
-        kwargs.update({
-            'node_mapping': relabel_mapping,
-            'filter_subgraph': True
-        })
-        G2 = self.create_graph(**kwargs)
+        G2 = self.remap_graph(node_mapping=relabel_mapping)
         return G2
 
     def shorten_name(self,
@@ -268,13 +252,13 @@ class Graphitty(object):
 
         :return: nxGraph, label
         """
-        if simplify:
-            self.simplify(**kwargs)
+        assert not simplify
+        # if simplify:
+        #     self.simplify(**kwargs)
 
-        if not self.G:
-            self.G = self.create_graph(**kwargs)
-        G = self.G
-
+        # if not self.G:
+        #     self.G = self.create_graph(**kwargs)
+        # G = self.G
         relabel_mapping = {}
 
         # use inverse doc frequency mapping
