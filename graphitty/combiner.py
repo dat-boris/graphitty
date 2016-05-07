@@ -13,12 +13,9 @@ class GraphCombiner(Graphitty):
 
     def __init__(self, g1, g2,
                  split_weight=False):
-        self.total1 = None
-        self.total2 = None
+        self.g1 = g1
+        self.g2 = g2
         self.G = self.combine_graph(g1, g2, split_weight=split_weight)
-
-    def create_graph(self):
-        return self.G
 
     def combine_graph(self,
                       g1, g2,
@@ -29,15 +26,12 @@ class GraphCombiner(Graphitty):
         # nx1.add_edges_from(nx2)
         edge_data = {}
         g1_edges = nx1.edges()
-        self.total1 = 0
-        self.total2 = 0
         for n1, n2 in g1_edges:
             weight = nx1.get_edge_data(n1, n2).get('weight', 0)
             if split_weight:
                 nx1[n1][n2]['weight1'] = weight
             else:
                 nx1[n1][n2]['weight'] = weight  # same thing
-            self.total1 += weight
 
         for n1, n2 in nx2.edges():
             weight = nx2.get_edge_data(n1, n2).get('weight', 0)
@@ -53,7 +47,6 @@ class GraphCombiner(Graphitty):
                 else:
                     nx1.add_edge(n1, n2,
                                  weight=weight)
-            self.total2 += weight
 
         return nx1
 
@@ -65,16 +58,31 @@ class GraphCombiner(Graphitty):
             ts_col=g.ts_col,
             node_mapping=name_mapping)
 
+    def get_simplifed_combine_graph(self):
+        combine_g = GraphCombiner(self.g1, self.g2, split_weight=False)
+        name_mapping = combine_g.get_simplify_mapping()
+
+        g1_simplify = combine_g.remap_graph(self.g1, name_mapping)
+        g2_simplify = combine_g.remap_graph(self.g2, name_mapping)
+
+        simplified_g = GraphCombiner(g1_simplify, g2_simplify,
+                                     split_weight=True)
+        simplified_g.do_compare()
+
+        return simplified_g
+
     def do_compare(self):
         # now execute comparison
         G = self.G
+        total1 = self.g1.df[self.g1.id_col].nunique()
+        total2 = self.g2.df[self.g2.id_col].nunique()
         for n1, n2 in G.edges():
             eattr = G.get_edge_data(n1, n2)
             G[n1][n2]['comparison'] = Comparator.compare_value(
                 eattr.get('weight1', 0),
                 eattr.get('weight2', 0),
-                total1=self.total1,
-                total2=self.total2
+                total1=total1,
+                total2=total2
             )
 
     def render_graph(self, filter_subgraph=True):

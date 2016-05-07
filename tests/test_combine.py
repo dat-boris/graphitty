@@ -46,10 +46,10 @@ def test_name_collapse(g, g2):
     assert 1 <= len(different) <= 20
 
 
-def xxxtest_simplify_comparison(g, g2):
-    g = GraphCombiner(g, g2, simplify=True)
-    g.do_compare()
-    nx_combined = g.render_graph()
+def test_simplify_comparison(g, g2):
+    g = GraphCombiner(g, g2)
+    simplified_g = g.get_simplifed_combine_graph()
+    nx_combined = simplified_g.render_graph()
     output_png = os.path.join(
         ARTIFACTS_DIR,
         'simplify_combined.png'
