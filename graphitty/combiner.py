@@ -96,11 +96,10 @@ class GraphCombiner(Graphitty):
                 comparison, w1, w2
             )
             color = 'grey'
-            if w1 and w2:
-                if comparison > threshold:
-                    color = 'blue'
-                elif comparison < -threshold:
-                    color = 'green'
+            if comparison > threshold:
+                color = 'blue' if w1 and w2 else 'green'
+            elif comparison < -threshold:
+                color = 'red' if w1 and w2 else 'yellow'
             return label, color
 
         G = self.render_label(self.G,

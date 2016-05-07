@@ -31,19 +31,6 @@ def test_read_generate_graph(g):
     assert nx.number_connected_components(nx_graph.to_undirected()) == 1
 
 
-def test_simplification(g):
-    output_png = os.path.join(ARTIFACTS_DIR, 'tree.png')
-
-    if os.path.isfile(output_png):
-        os.remove(output_png)
-
-    g_simplify = g.simplify()
-    nx_tree = g_simplify.render_graph(
-        filter_subgraph=True
-    )
-    draw(nx_tree, output_png, show=False)
-
-
 def test_simplify_explicit_with_shorten(g):
     """
     Simplify using explicit mapping
@@ -70,6 +57,19 @@ def test_simplify_explicit_with_shorten(g):
         node_mapping=mapping)
     assert 'start' in g_simplify.G.nodes()
 
+    nx_tree = g_simplify.render_graph(
+        filter_subgraph=True
+    )
+    draw(nx_tree, output_png, show=False)
+
+
+def test_simplification(g):
+    output_png = os.path.join(ARTIFACTS_DIR, 'tree.png')
+
+    if os.path.isfile(output_png):
+        os.remove(output_png)
+
+    g_simplify = g.simplify()
     nx_tree = g_simplify.render_graph(
         filter_subgraph=True
     )

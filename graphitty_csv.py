@@ -28,8 +28,8 @@ def parse_graph(csv):
     )
     draw_with_output(nx_orig, "original_" + output_png)
 
-    g.shorten_name(simplify=True)
-    nx_orig = g.render_graph(
+    g_simplify = g.simplify()
+    nx_orig = g_simplify.render_graph(
         filter_subgraph=True
     )
     draw_with_output(nx_orig, "simplified_" + output_png)
@@ -48,7 +48,8 @@ if __name__ == '__main__':
     g1 = parse_graph(csv1)
     g2 = parse_graph(csv2)
 
-    g = GraphCombiner(g1, g2, simplify=True)
-    g.do_compare()
-    nx_combined = g.render_graph()
+    g = GraphCombiner(g1, g2)
+    simplified_g = g.get_simplifed_combine_graph()
+
+    nx_combined = simplified_g.render_graph()
     draw_with_output(nx_combined, imgout)
