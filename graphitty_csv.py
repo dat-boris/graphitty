@@ -13,7 +13,7 @@ from graphitty.combiner import GraphCombiner
 from nxpd import draw
 
 
-def run_simplication(csv):
+def parse_graph(csv):
     output_png = csv + '.png'
     df = pd.read_csv(csv)
     g = Graphitty(
@@ -23,20 +23,16 @@ def run_simplication(csv):
         ts_col='date')
 
     # draw non-condensed version
-    nx_orig = g.create_graph(
-        min_edges=0,
+    nx_orig = g.render_graph(
         filter_subgraph=False
     )
     draw_with_output(nx_orig, "original_" + output_png)
 
-    nx_orig = g.create_graph(
-        min_edges=0,
+    g_simplify = g.simplify()
+    nx_orig = g_simplify.render_graph(
         filter_subgraph=True
     )
     draw_with_output(nx_orig, "simplified_" + output_png)
-
-    nx_condense = g.simplify()
-    draw_with_output(nx_condense, output_png)
 
     return g
 
@@ -49,9 +45,11 @@ if __name__ == '__main__':
     csv1 = sys.argv[1]
     csv2 = sys.argv[2]
     imgout = sys.argv[3]
-    g1 = run_simplication(csv1)
-    g2 = run_simplication(csv2)
+    g1 = parse_graph(csv1)
+    g2 = parse_graph(csv2)
 
     g = GraphCombiner(g1, g2)
-    nx_combined = g.create_graph()
+    simplified_g = g.get_simplifed_combine_graph()
+
+    nx_combined = simplified_g.render_graph()
     draw_with_output(nx_combined, imgout)

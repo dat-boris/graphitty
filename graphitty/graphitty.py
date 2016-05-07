@@ -1,6 +1,6 @@
 import math
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 
 import networkx as nx
 import pandas as pd
@@ -16,35 +16,80 @@ class Graphitty(object):
                  id_col,
                  beahivour_col,
                  ts_col,
-                 init=True
+                 init=True,
+                 node_mapping=None
                  ):
-        self.graph_edges = Counter()
         self.df = df
         self.behaviour_col = beahivour_col
         self.id_col = id_col
         self.ts_col = ts_col
         self.G = None
-        if init:
-            self.build_path()
+        self.add_edge_callback = None
 
-    def build_path(self):
+        if init:
+            self.build_path(node_mapping=node_mapping)
+            assert len(self.G.nodes()) > 0
+
+    def build_path(self, node_mapping=None):
         """
-        Parse dataframe into `graph_edges`
+        Parse dataframe into Network X edges
         """
+        edge_count = Counter()
+
+        if node_mapping:
+            src_dst_mapping = {}
+            for dst, src_list in node_mapping.iteritems():
+                for src in src_list:
+                    src_dst_mapping[src] = dst
+
+        def add_edge_callback(n1, n2):
+            if node_mapping:
+                n1 = src_dst_mapping.get(n1, n1)
+                n2 = src_dst_mapping.get(n2, n2)
+            edge_count[(n1, n2)] += 1
+
+        self.add_edge_callback = add_edge_callback
         path_aggregate = pd.DataFrame(
             self.df.groupby(self.id_col).apply(
                 self.get_template_path),
             columns=['path']
         )
+
+        assert len([n for n in edge_count.keys() if 'start' in n[0]]) > 0
+
+        self.G = self.__create_graph_from_edges(edge_count)
+
+        # now given the edges, create the nxgraph
         return path_aggregate
 
-    def get_template_path(self, group, add_exit=True):
+    def __create_graph_from_edges(self, edge_count,
+                                  min_edges=0,
+                                  skip_backref=True,
+                                  max_edges=200):
+        G = nx.DiGraph()
+        added_edges = {}
+
+        for i, (e, count) in enumerate(edge_count.most_common(max_edges)):
+            if (min_edges is not None) and (count < min_edges):
+                continue
+            if skip_backref and ((e[1], e[0]) in added_edges):
+                continue
+            # print "Added edge: {}".format([e[0],e[1]])
+            G.add_edge(e[0], e[1], weight=count)
+            added_edges[(e[0], e[1])] = 1
+        return G
+
+    def get_template_path(self, group,
+                          add_exit=True,
+                          add_edge_callback=None):
         """
         Internal function for parsing path. Can be overridden to customize
         behaviour for generating path
 
         :param: add_exit [bool] Add an exit node
         """
+        if not add_edge_callback:
+            add_edge_callback = self.add_edge_callback
         sorted_time = group.sort(self.ts_col)
         seen_templates = {}
         path = ['start']
@@ -58,19 +103,17 @@ class Graphitty(object):
                 seen_templates[t] = 1
                 path.append(t)
                 if len(path) >= 2:
-                    self.graph_edges[(path[-2], path[-1])] += 1
+                    if add_edge_callback:
+                        add_edge_callback(path[-2], path[-1])
         if add_exit:
             path.append('exit')
-            self.graph_edges[(path[-2], path[-1])] += 1
-        return ','.join(path)
+            if add_edge_callback:
+                add_edge_callback(path[-2], path[-1])
+        return path
 
-    def create_graph(self,
-                     min_edges=0,
+    def render_graph(self,
                      use_perc_label=True,
-                     filter_subgraph=True,
-                     skip_backref=True,
-                     node_mapping=None,
-                     MAX_COUNT=100):
+                     filter_subgraph=True):
         """
         Create a networkx
 
@@ -78,47 +121,10 @@ class Graphitty(object):
 
         :return: Network x graph
         """
-        G = nx.DiGraph()
-        added_edges = {}
-
-        # consider node_mapping data
-        # build a mapping of the src -> dst node
-        mapped_edge_count = Counter()
-
-        if node_mapping:
-            src_dst_mapping = {}
-            for dst, src_list in node_mapping.iteritems():
-                for src in src_list:
-                    src_dst_mapping[src] = dst
-
-            for i, (e, count) in enumerate(
-                    self.graph_edges.most_common(MAX_COUNT)):
-
-                src_node = src_dst_mapping.get(e[0], e[0])
-                dst_node = src_dst_mapping.get(e[1], e[1])
-
-                mapped_edge_count[(src_node, dst_node)] += count
-                # remap self.graph_edges
-                self.graph_edges = mapped_edge_count
-        else:
-            mapped_edge_count = self.graph_edges
-
-        for i, (e, count) in enumerate(
-                mapped_edge_count.most_common(MAX_COUNT)):
-
-            if count >= min_edges:
-                if skip_backref and ((e[1], e[0]) in added_edges):
-                    continue
-                # print "Added edge: {}".format([e[0],e[1]])
-                G.add_edge(e[0], e[1], weight=count)
-                added_edges[(e[1], e[0])] = 1
-
+        G = self.G
         G = self.render_label(G, use_perc_label=use_perc_label)
-
         if filter_subgraph:
             G = self.filter_subgraph(G)
-
-        self.G = G
         return G
 
     @classmethod
@@ -136,13 +142,16 @@ class Graphitty(object):
             for n0, n1, d in graph_edges
         }
 
-        # TODO: better colour map
-        # http://stackoverflow.com/questions/14777066/
-        #   matplotlib-discrete-colorbar
-        color_array = ['red', 'orange', 'yellow', 'grey']
-        if use_perc_label:
-            color_array.reverse()
-        max_weight = 100 if use_perc_label else max(mapped_edge_count.values())
+        if render_func is None:
+            # TODO: better colour map
+            # http://stackoverflow.com/questions/14777066/
+            #   matplotlib-discrete-colorbar
+            color_array = ['red', 'orange', 'yellow', 'grey']
+            if use_perc_label:
+                color_array.reverse()
+
+            max_weight = 100 if use_perc_label else max(
+                mapped_edge_count.values())
 
         def default_renderer(G, e, count):
             if use_perc_label:
@@ -206,18 +215,29 @@ class Graphitty(object):
                                     target=self.get_node(G, 'exit')
                                     )
         return sorted(paths,
-                      key=lambda p: G[p[0]][p[1]]['weight'],
+                      key=lambda p: G[p[0]][p[1]].get('weight'),
                       reverse=True)
 
-    def simplify(self, **kwargs):
+    def simplify(self):
         """
         Return an edge contract version of the graph for simplification
+
+        NOTE: return new graph
         """
-        kwargs.update({
-            'node_mapping': None,
-            'filter_subgraph': False
-        })
-        G = self.create_graph(**kwargs)
+        mapping = self.get_simplify_mapping()
+        g = Graphitty(
+            self.df,
+            id_col=self.id_col,
+            beahivour_col=self.behaviour_col,
+            ts_col=self.ts_col,
+            node_mapping=mapping)
+
+        assert len(g.G.nodes()) > 0
+        return g
+
+    def get_simplify_mapping(self, shorten=True):
+        assert self.G
+        G = self.G
 
         scc = list(nx.strongly_connected_components(G))
         G = nx.condensation(G, scc=scc)
@@ -230,53 +250,53 @@ class Graphitty(object):
             )
             relabel_mapping[node_name] = scc[node]
 
-        kwargs.update({
-            'node_mapping': relabel_mapping,
-            'filter_subgraph': True
-        })
-        G2 = self.create_graph(**kwargs)
-        return G2
+        if shorten:
+            shorten_mapping = self.shorten_name(
+                node_list=relabel_mapping.keys()
+            )
+            relabel_mapping = {
+                shorten_mapping[old_name]: orig_nodes
+                for old_name, orig_nodes in relabel_mapping.iteritems()
+            }
+
+        return relabel_mapping
 
     def shorten_name(self,
-                     simplify=False,
+                     node_list=None,
                      top_terms=3,
-                     black_list_term={'html'},
-                     **kwargs):
+                     black_list_term={'html'}):
         """
         Shorten node name of graph
 
-        :return: nxGraph, label
+        :return: label_mapping (dict of orig_name -> new_name)
         """
-        if simplify:
-            self.simplify(**kwargs)
-
-        if not self.G:
-            self.G = self.create_graph(**kwargs)
-        G = self.G
-
         relabel_mapping = {}
-
         # use inverse doc frequency mapping
+
+        if node_list is None:
+            node_list = G.nodes()
+            G = self.G
+        else:
+            G = None
+
         def tokenizer(s):
             return [
                 t for t in re.split(r'[^\w\d-]+', s)
                 if len(t) >= 3 and t not in black_list_term
             ]
-        token_docs = [tokenizer(n) for n in G.nodes()]
+        token_docs = [tokenizer(n) for n in node_list]
         tf_idf_counts = tf_idf(token_docs)
-        for i, n in enumerate(G.nodes()):
+        for i, n in enumerate(node_list):
             tf_counter = tf_idf_counts[i]
             name = ' + '.join(
                 [
                     t[0] for t in tf_counter.most_common(top_terms)
                 ])
-            relabel_mapping[name] = [n]
+            relabel_mapping[n] = name
+        if G is not None:
+            self.G = nx.relabel_nodes(G, relabel_mapping)
 
-        kwargs.update({
-            'node_mapping': relabel_mapping
-        })
-        G2 = self.create_graph(**kwargs)
-        return G2, relabel_mapping
+        return relabel_mapping
 
 
 def tf_idf(docs, max_doc_freq=None):
