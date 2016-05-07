@@ -76,7 +76,7 @@ class Graphitty(object):
                 continue
             # print "Added edge: {}".format([e[0],e[1]])
             G.add_edge(e[0], e[1], weight=count)
-            added_edges[(e[1], e[0])] = 1
+            added_edges[(e[0], e[1])] = 1
         return G
 
     def get_template_path(self, group,
