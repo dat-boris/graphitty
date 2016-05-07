@@ -16,7 +16,8 @@ class Graphitty(object):
                  id_col,
                  beahivour_col,
                  ts_col,
-                 init=True
+                 init=True,
+                 node_mapping=None
                  ):
         self.df = df
         self.behaviour_col = beahivour_col
@@ -26,17 +27,25 @@ class Graphitty(object):
         self.add_edge_callback = None
 
         if init:
-            self.build_path()
+            self.build_path(node_mapping=node_mapping)
             assert len(self.G.nodes()) > 0
 
-    def build_path(self,
-                   ):
+    def build_path(self, node_mapping=None):
         """
         Parse dataframe into Network X edges
         """
         edge_count = Counter()
 
+        if node_mapping:
+            src_dst_mapping = {}
+            for dst, src_list in node_mapping.iteritems():
+                for src in src_list:
+                    src_dst_mapping[src] = dst
+
         def add_edge_callback(n1, n2):
+            if node_mapping:
+                n1 = src_dst_mapping.get(n1, n1)
+                n2 = src_dst_mapping.get(n2, n2)
             edge_count[(n1, n2)] += 1
 
         self.add_edge_callback = add_edge_callback
@@ -45,6 +54,8 @@ class Graphitty(object):
                 self.get_template_path),
             columns=['path']
         )
+
+        assert len([n for n in edge_count.keys() if 'start' in n[0]]) > 0
 
         self.G = self.__create_graph_from_edges(edge_count)
 
@@ -99,25 +110,6 @@ class Graphitty(object):
             if add_edge_callback:
                 add_edge_callback(path[-2], path[-1])
         return path
-
-    def remap_graph(self, node_mapping):
-        G = self.G
-        mapped_edge_count = Counter()
-        src_dst_mapping = {}
-        for dst, src_list in node_mapping.iteritems():
-            for src in src_list:
-                src_dst_mapping[src] = dst
-
-        for i, e in enumerate(G.edges()):
-            count = self.G.get_edge_data(*e)['weight']
-
-            src_node = src_dst_mapping.get(e[0], e[0])
-            dst_node = src_dst_mapping.get(e[1], e[1])
-
-            mapped_edge_count[(src_node, dst_node)] += count
-
-        self.G = G = self.__create_graph_from_edges(mapped_edge_count)
-        return G
 
     def render_graph(self,
                      use_perc_label=True,
@@ -229,7 +221,21 @@ class Graphitty(object):
     def simplify(self):
         """
         Return an edge contract version of the graph for simplification
+
+        NOTE: return new graph
         """
+        mapping = self.get_simplify_mapping()
+        g = Graphitty(
+            self.df,
+            id_col=self.id_col,
+            beahivour_col=self.behaviour_col,
+            ts_col=self.ts_col,
+            node_mapping=mapping)
+
+        assert len(g.G.nodes()) > 0
+        return g
+
+    def get_simplify_mapping(self, shorten=True):
         assert self.G
         G = self.G
 
@@ -244,42 +250,53 @@ class Graphitty(object):
             )
             relabel_mapping[node_name] = scc[node]
 
-        G2 = self.remap_graph(
-            node_mapping=relabel_mapping)
-        assert len(G2.nodes()) > 0
-        return G2
+        if shorten:
+            shorten_mapping = self.shorten_name(
+                node_list=relabel_mapping.keys()
+            )
+            relabel_mapping = {
+                shorten_mapping[old_name]: orig_nodes
+                for old_name, orig_nodes in relabel_mapping.iteritems()
+            }
+
+        return relabel_mapping
 
     def shorten_name(self,
-                     simplify=True,
+                     node_list=None,
                      top_terms=3,
                      black_list_term={'html'}):
         """
         Shorten node name of graph
 
-        :return: nxGraph, label
+        :return: label_mapping (dict of orig_name -> new_name)
         """
-        if simplify:
-            self.simplify()
-
-        G = self.G
         relabel_mapping = {}
         # use inverse doc frequency mapping
+
+        if node_list is None:
+            node_list = G.nodes()
+            G = self.G
+        else:
+            G = None
 
         def tokenizer(s):
             return [
                 t for t in re.split(r'[^\w\d-]+', s)
                 if len(t) >= 3 and t not in black_list_term
             ]
-        token_docs = [tokenizer(n) for n in G.nodes()]
+        token_docs = [tokenizer(n) for n in node_list]
         tf_idf_counts = tf_idf(token_docs)
-        for i, n in enumerate(G.nodes()):
+        for i, n in enumerate(node_list):
             tf_counter = tf_idf_counts[i]
             name = ' + '.join(
                 [
                     t[0] for t in tf_counter.most_common(top_terms)
                 ])
             relabel_mapping[n] = name
-        self.G = nx.relabel_nodes(G, relabel_mapping)
+        if G is not None:
+            self.G = nx.relabel_nodes(G, relabel_mapping)
+
+        return relabel_mapping
 
 
 def tf_idf(docs, max_doc_freq=None):
