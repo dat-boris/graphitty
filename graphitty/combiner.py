@@ -11,23 +11,20 @@ from .comparator import Comparator
 
 class GraphCombiner(Graphitty):
 
-    def __init__(self, g1, g2, simplify=False):
+    def __init__(self, g1, g2,
+                 split_weight=False):
         self.total1 = None
         self.total2 = None
-        self.G = self.combine_graph(g1, g2, simplify=simplify)
+        self.G = self.combine_graph(g1, g2, split_weight=split_weight)
 
     def create_graph(self):
         return self.G
 
     def combine_graph(self,
                       g1, g2,
-                      simplify=False):
-        # 1. get shortname of g1
-        g1.shorten_name(simplify=simplify)
-        g2.shorten_name(simplify=simplify)
-        return self.combine_nx_graph(g1.G, g2.G)
-
-    def combine_nx_graph(self, nx1, nx2):
+                      split_weight=False):
+        nx1 = g1.G
+        nx2 = g2.G
         nx1.add_nodes_from(nx2)
         # nx1.add_edges_from(nx2)
         edge_data = {}
@@ -36,22 +33,37 @@ class GraphCombiner(Graphitty):
         self.total2 = 0
         for n1, n2 in g1_edges:
             weight = nx1.get_edge_data(n1, n2).get('weight', 0)
-            nx1[n1][n2]['weight1'] = weight
+            if split_weight:
+                nx1[n1][n2]['weight1'] = weight
+            else:
+                nx1[n1][n2]['weight'] = weight  # same thing
             self.total1 += weight
 
         for n1, n2 in nx2.edges():
             weight = nx2.get_edge_data(n1, n2).get('weight', 0)
             if (n1, n2) in g1_edges:
-                nx1[n1][n2]['weight2'] = weight
+                if split_weight:
+                    nx1[n1][n2]['weight2'] = weight
+                else:
+                    nx1[n1][n2]['weight'] += weight
             else:
-                nx1.add_edge(n1, n2,
-                             weight2=weight)
+                if split_weight:
+                    nx1.add_edge(n1, n2,
+                                 weight2=weight)
+                else:
+                    nx1.add_edge(n1, n2,
+                                 weight=weight)
             self.total2 += weight
 
         return nx1
 
-    def simplify(self):
-        raise NotImplementedError("Cannot simplify combined graph")
+    def remap_graph(self, g, name_mapping):
+        return Graphitty(
+            g.df,
+            id_col=g.id_col,
+            beahivour_col=g.behaviour_col,
+            ts_col=g.ts_col,
+            node_mapping=name_mapping)
 
     def do_compare(self):
         # now execute comparison
