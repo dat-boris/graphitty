@@ -14,5 +14,5 @@ setup(
     author="Boris Lau",
     author_email="boris@techie.im",
     url="https://github.com/sketchytechky/graphitty",
-    package=['graphitty'],
+    packages=['graphitty'],
     install_requires=requires)

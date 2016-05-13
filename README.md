@@ -15,7 +15,7 @@ A Python library that convert time series to direction Graph to discover the sto
 
 To install this package, runs:
 
-    pip install https://github.com/sketchytechky/graphitty.git
+    pip install git+https://github.com/sketchytechky/graphitty.git
 
 Remember to add the following line to `requirements.txt`
 
