@@ -17,7 +17,10 @@ class Graphitty(object):
                  beahivour_col,
                  ts_col,
                  init=True,
-                 node_mapping=None
+                 node_mapping=None,
+                 skip_backref=True,
+                 max_edges=200,
+                 min_edges=0
                  ):
         self.df = df
         self.behaviour_col = beahivour_col
@@ -27,10 +30,17 @@ class Graphitty(object):
         self.add_edge_callback = None
 
         if init:
-            self.build_path(node_mapping=node_mapping)
+            self.build_path(node_mapping=node_mapping,
+                            skip_backref=skip_backref,
+                            min_edges=min_edges,
+                            max_edges=max_edges)
             assert len(self.G.nodes()) > 0
 
-    def build_path(self, node_mapping=None):
+    def build_path(self,
+                   node_mapping=None,
+                   skip_backref=True,
+                   max_edges=200,
+                   min_edges=0):
         """
         Parse dataframe into Network X edges
         """
@@ -57,7 +67,11 @@ class Graphitty(object):
 
         assert len([n for n in edge_count.keys() if 'start' in n[0]]) > 0
 
-        self.G = self.__create_graph_from_edges(edge_count)
+        self.G = self.__create_graph_from_edges(
+            edge_count, skip_backref=skip_backref,
+            min_edges=min_edges,
+            max_edges=max_edges
+        )
 
         # now given the edges, create the nxgraph
         return path_aggregate
