@@ -104,7 +104,7 @@ class Graphitty(object):
         """
         if not add_edge_callback:
             add_edge_callback = self.add_edge_callback
-        sorted_time = group.sort(self.ts_col)
+        sorted_time = group.sort_values(self.ts_col)
         seen_templates = {}
         path = ['start']
         for _, row in sorted_time.iterrows():

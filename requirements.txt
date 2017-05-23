@@ -1,5 +1,5 @@
 nxpd==0.1.2
-pandas==0.16.0
+pandas==0.20.1
 
 # test requirements
 tox
