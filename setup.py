@@ -7,7 +7,7 @@ requires = []
 
 setup(
     name="graphitty",
-    version='0.0.1',
+    version='0.0.2',
     description="A Python library that convert time series to direction " +
     "Graph to discover the story within data.",
     long_description="\n\n".join([open("README.md").read()]),
