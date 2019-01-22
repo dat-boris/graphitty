@@ -1,4 +1,5 @@
 import pandas as pd
+from collections import defaultdict
 
 
 class Funnel(object):
@@ -9,6 +10,7 @@ class Funnel(object):
     def __init__(self, path, df, graph):
         self.funnel_path = path
         self.graph = graph
+        self.user_max_steps = {}
 
         self.steps = self.identify_user_steps(path, graph)
         # self.mark_df_funnel_steps()
@@ -39,6 +41,7 @@ class Funnel(object):
             common_path = self.is_common_path(path.path)
             for i, p in enumerate(common_path):
                 steps[i]['user'].append(user_id)
+            self.user_max_steps[user_id] = len(common_path)
         return steps
 
     def describe_steps(self):
@@ -50,3 +53,46 @@ class Funnel(object):
             1 - self.funnel_df.user_count / self.funnel_df.user_count.shift(1)
         )
         return self.funnel_df
+
+    def remove_user(self, user_id):
+        if user_id not in self.user_max_steps:
+            raise KeyError("User {} not in funnel".format(user_id))
+        max_steps = self.user_max_steps[user_id]
+        del self.user_max_steps[user_id]
+        for s in self.steps[:max_steps]:
+            s['user'].remove(user_id)
+
+
+class FunnelCombination(object):
+    """ This class consider multiple funnel, and remove user who have progressed
+    further in other funnel.
+
+    For example:
+        Funnel 1: [1, 3, 5]
+        Funnel 2: [1, 2, 4]
+        User A: [1, 3]
+
+    Then in above case User A will only be considered in Funnel 1.
+    """
+
+    def __init__(self, funnels):
+        self.funnels = funnels
+        user_max_steps = defaultdict(int)
+
+        # identify max steps from user
+        for f in funnels:
+            for user, max_steps in f.user_max_steps.items():
+                if user_max_steps[user] < max_steps:
+                    user_max_steps[user] = max_steps
+
+        # remove user that is not suitable
+        for user, combine_max_steps in user_max_steps.items():
+            for f in funnels:
+                max_steps = f.user_max_steps[user]
+                if combine_max_steps > max_steps:
+                    f.remove_user(user)
+        self.user_max_steps = user_max_steps
+
+    @property
+    def user_ids(self):
+        return set(self.user_max_steps.keys())
