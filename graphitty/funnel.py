@@ -1,6 +1,7 @@
 import random
 import pandas as pd
 import seaborn as sns
+import matplotlib.pyplot as plt
 from collections import defaultdict
 
 
@@ -83,7 +84,7 @@ class Funnel(object):
     @property
     def funnel_path_in_df(self):
         # These are nodes which is added manually
-        ignore_nodes = {'start', 'end'}
+        ignore_nodes = {'start', 'exit'}
         funnel_path = [
             p for p in self.funnel_path if p not in ignore_nodes
         ]
@@ -106,7 +107,8 @@ class Funnel(object):
         wanted_steps = []
         for _, row in sorted_time.iterrows():
             # Identify what step the user is at
-            path_name = funnel_path[path_idx]
+            path_name = funnel_path[path_idx] if path_idx < len(
+                funnel_path) else 'exit'
             current_name = row[self.behaviour_col]
             if path_name == current_name:
                 path_idx += 1
@@ -144,20 +146,67 @@ class Funnel(object):
         self.annotated_df = annotated_df
         return annotated_df
 
-    def visualize_dropoff(self, compare_col='sufficiently_usable'):
-        annotated_df = self.annotated_df
+    def visualize_dropoff(self, metric, kind='histogram', xmax=None, bins=10):
         funnel_path = self.funnel_path_in_df
         # it doesnt make sense for last step
         for i, step_name in enumerate(funnel_path[:-1]):
-            step_df = annotated_df[annotated_df.step_count == i+1]
-            sns.jointplot(
-                step_df['is_last_step'],
-                step_df[compare_col],
-                kind='reg'
-            ).fig.suptitle(
-                'Step {}: comparing {} to dropoff ratio'.format(
-                    step_name, compare_col
-                ))
+            if kind == 'histogram':
+                self.visualize_step_dropoff_histogram(
+                    i, metric,
+                    xmax=xmax, bins=bins
+                )
+            elif kind == 'correlation':
+                self.visualize_step_dropoff_correlation(
+                    i, metric
+                )
+            else:
+                raise KeyError(
+                    "kind must be one of 'histogram' or 'correlation'")
+
+    def visualize_step_dropoff_correlation(self, step_count, metric,
+                                           label='is_last_step', title=None):
+        funnel_path = self.funnel_path_in_df
+        step_name = funnel_path[step_count]
+
+        df = self.annotated_df
+        step_df = df[df.step_count == step_count+1]
+        sns.jointplot(
+            step_df['is_last_step'],
+            step_df[metric],
+            kind='reg'
+        ).fig.suptitle(
+            'Step {}: comparing {} to dropoff ratio'.format(
+                step_name, metric
+            ))
+
+    def visualize_step_dropoff_histogram(self, step_count, metric,
+                                         label='is_last_step',
+                                         xmin=0, xmax=None, bins=10,
+                                         title=None):
+        """Visualize histogram of distribution of dropoff metrics
+        """
+        funnel_path = self.funnel_path_in_df
+        step_name = funnel_path[step_count]
+        if title is None:
+            title = 'Step {}: comparing {} to dropoff ratio'.format(
+                    step_name, metric
+            )
+        df = self.annotated_df
+        df = df[df.step_count == step_count+1]
+        label_classes = sorted(df[label].unique())
+        series = [
+            df[df[label] == v][metric].dropna()
+            for v in label_classes
+        ]
+        if xmax is None:
+            xmax = df[metric].max()
+
+        plt.hist(series, range=[xmin, xmax], bins=bins, label=[
+            "{}={}".format(label, c) for c in label_classes
+        ])
+        plt.title(title)
+        plt.legend(loc='upper right')
+        plt.show()
 
 
 class FunnelCombination(object):
