@@ -31,6 +31,7 @@ class Graphitty(object):
         self.G = None
         self.rendered_G = None
         self.add_edge_callback = None
+        self.path_aggregate_df = None
 
         if init:
             self.build_path(node_mapping=node_mapping,
@@ -77,6 +78,7 @@ class Graphitty(object):
         )
 
         # now given the edges, create the nxgraph
+        self.path_aggregate_df = path_aggregate
         return path_aggregate
 
     def __create_graph_from_edges(self, edge_count,
