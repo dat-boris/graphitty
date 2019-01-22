@@ -1,3 +1,5 @@
+import six
+
 import math
 import re
 from collections import Counter, defaultdict
@@ -48,7 +50,7 @@ class Graphitty(object):
 
         if node_mapping:
             src_dst_mapping = {}
-            for dst, src_list in node_mapping.iteritems():
+            for dst, src_list in node_mapping.items():
                 for src in src_list:
                     src_dst_mapping[src] = dst
 
@@ -172,13 +174,13 @@ class Graphitty(object):
                 # get all in edge
                 in_count = sum([
                     c for (n0, n1), c
-                    in mapped_edge_count.iteritems()
+                    in mapped_edge_count.items()
                     if n1 == e[0]
                 ])
                 if in_count == 0:
                     out_count = sum([
                         c for (n0, n1), c
-                        in mapped_edge_count.iteritems()
+                        in mapped_edge_count.items()
                         if n0 == e[0]
                     ])
                     label = 100. * count / out_count
@@ -199,7 +201,7 @@ class Graphitty(object):
         if render_func is None:
             render_func = default_renderer
 
-        for e, count in mapped_edge_count.iteritems():
+        for e, count in mapped_edge_count.items():
             label, edge_color = render_func(G, e, count)
             G[e[0]][e[1]].update({
                 'label': label,
@@ -270,7 +272,7 @@ class Graphitty(object):
             )
             relabel_mapping = {
                 shorten_mapping[old_name]: orig_nodes
-                for old_name, orig_nodes in relabel_mapping.iteritems()
+                for old_name, orig_nodes in relabel_mapping.items()
             }
 
         return relabel_mapping

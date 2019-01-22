@@ -42,7 +42,7 @@ g = Graphitty(
     id_col='user_id',
     beahivour_col='action',
     ts_col='timestamp')
-nx_graph = g.render()
+nx_graph = g.render_graph()
 
 # create the beautiful directional graph
 # see https://github.com/chebee7i/nxpd for usage
