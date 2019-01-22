@@ -16,7 +16,7 @@ class Graphitty(object):
 
     def __init__(self, df,
                  id_col,
-                 beahivour_col,
+                 behaviour_col,
                  ts_col,
                  init=True,
                  node_mapping=None,
@@ -25,7 +25,7 @@ class Graphitty(object):
                  min_edges=0
                  ):
         self.df = df
-        self.behaviour_col = beahivour_col
+        self.behaviour_col = behaviour_col
         self.id_col = id_col
         self.ts_col = ts_col
         self.G = None
@@ -265,7 +265,7 @@ class Graphitty(object):
         g = Graphitty(
             self.df,
             id_col=self.id_col,
-            beahivour_col=self.behaviour_col,
+            behaviour_col=self.behaviour_col,
             ts_col=self.ts_col,
             node_mapping=mapping)
 
