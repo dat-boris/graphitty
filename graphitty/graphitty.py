@@ -220,9 +220,12 @@ class Graphitty(object):
         seen_nodes = set()
         for path in self.get_path_in_weight_order(G)[:max_path]:
             seen_nodes.update(path)
+        nodes_to_remove = []
         for n in G.nodes():
             if n not in seen_nodes:
-                G.remove_node(n)
+                nodes_to_remove.append(n)
+        for n in nodes_to_remove:
+            G.remove_node(n)
         return G
 
     def get_path_in_weight_order(self, G):
