@@ -29,6 +29,7 @@ class Graphitty(object):
         self.id_col = id_col
         self.ts_col = ts_col
         self.G = None
+        self.rendered_G = None
         self.add_edge_callback = None
 
         if init:
@@ -141,6 +142,7 @@ class Graphitty(object):
         G = self.render_label(G, use_perc_label=use_perc_label)
         if filter_subgraph:
             G = self.filter_subgraph(G)
+        self.rendered_G = G
         return G
 
     @classmethod
@@ -228,7 +230,9 @@ class Graphitty(object):
             G.remove_node(n)
         return G
 
-    def get_path_in_weight_order(self, G):
+    def get_path_in_weight_order(self, G=None):
+        if G is None:
+            G = self.rendered_G
         paths = nx.all_simple_paths(G,
                                     source=self.get_node(G, 'start'),
                                     target=self.get_node(G, 'exit')
@@ -236,6 +240,18 @@ class Graphitty(object):
         return sorted(paths,
                       key=lambda p: G[p[0]][p[1]].get('weight'),
                       reverse=True)
+
+    def get_path_in_weight_order_with_weight(self, G=None):
+        if G is None:
+            G = self.rendered_G
+        paths = self.get_path_in_weight_order(G)
+        return [
+            {
+                'path': p,
+                'weight': G[p[0]][p[1]].get('weight')
+            }
+            for p in paths
+        ]
 
     def simplify(self):
         """
